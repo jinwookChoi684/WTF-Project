@@ -1,0 +1,126 @@
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowLeft, Sparkles, ImageIcon, BookOpen } from "lucide-react"
+
+interface DiaryEntryType {
+  id: string
+  date: Date
+  title: string
+  content: string
+  emotion: "happy" | "sad" | "neutral" | "excited" | "anxious"
+  imageUrl: string
+  summary: string
+}
+
+interface DiaryCreationProps {
+  onComplete: (entry: DiaryEntryType) => void
+  onCancel: () => void
+}
+
+export default function DiaryCreation({ onComplete, onCancel }: DiaryCreationProps) {
+  const [step, setStep] = useState<"analyzing" | "generating" | "complete">("analyzing")
+  const [generatedEntry, setGeneratedEntry] = useState<DiaryEntryType | null>(null)
+
+  const handleAnalyze = async () => {
+    setStep("analyzing")
+
+    try {
+      const userId = localStorage.getItem("user_id")
+      if (!userId) throw new Error("user_id 없음")
+
+      const res = await fetch(`http://localhost:8000/diary?user_id=${userId}`)
+      const data = await res.json()
+
+      const newEntry: DiaryEntryType = {
+        id: Date.now().toString(),
+        date: new Date(),
+        title: data.title,
+        content: data.content,
+        emotion: data.emotion,
+        imageUrl: data.image_url,
+        summary: data.summary,
+      }
+
+      setGeneratedEntry(newEntry)
+      setStep("complete")
+    } catch (e) {
+      console.error("일기 생성 실패:", e)
+      setStep("analyzing")
+    }
+  }
+
+  const handleComplete = () => {
+    if (generatedEntry) {
+      onComplete(generatedEntry)
+    }
+  }
+
+  // 컴포넌트 로드 시 자동 분석 시작
+  useState(() => {
+    handleAnalyze()
+  })
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 p-4">
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="sm" onClick={onCancel} className="text-gray-600 hover:text-gray-800">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            돌아가기
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">감정 일기 생성</h1>
+            <p className="text-gray-600">우빵이가 채팅 내용을 분석해서 일기를 작성 중이에요</p>
+          </div>
+        </div>
+
+        {step === "analyzing" && (
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-200 to-orange-200 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <Sparkles className="w-8 h-8 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">감정을 분석하고 있어요</h3>
+              <p className="text-gray-600">잠시만 기다려 주세요...</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === "complete" && generatedEntry && (
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-center text-amber-800">감정 일기가 완성되었어요!</CardTitle>
+              <CardDescription className="text-center text-gray-600">아래 내용을 확인해보세요</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <img
+                src={generatedEntry.imageUrl || "/placeholder.svg"}
+                alt={generatedEntry.title}
+                className="w-full h-48 object-cover rounded-lg"
+              />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">{generatedEntry.title}</h3>
+                <p className="text-gray-700 leading-relaxed">{generatedEntry.content}</p>
+              </div>
+              <div className="flex space-x-3">
+                <Button
+                  onClick={handleComplete}
+                  className="flex-1 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white"
+                >
+                  일기 저장하기
+                </Button>
+                <Button onClick={handleAnalyze} variant="outline" className="flex-1 border-gray-300">
+                  다시 생성하기
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  )
+}
