@@ -8,7 +8,7 @@ from .utils import analyze_emotion, summarize_text, generate_image
 from .chat import get_chat_history  # DynamoDB에서 유저 채팅 불러오는 함수
 from .diary_db import get_diary_entries
 from .diary_db import save_diary_entry
-aaaaaa
+
 router = APIRouter()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
