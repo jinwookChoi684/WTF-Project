@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a3311d9e-8a2b-4118-b59a-085f91c685f5" name="변경" comment="aa" />
+    <list default="true" id="a3311d9e-8a2b-4118-b59a-085f91c685f5" name="변경" comment="aaa">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/requirements.txt" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -24,12 +27,12 @@
     &quot;assignee&quot;: &quot;dktk1920&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/jinwookChoi684/WTF-Project.git&quot;,
-    &quot;accountId&quot;: &quot;a38aef2e-e069-47eb-959f-91d82ed12f62&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/jinwookChoi684/WTF-Project.git",
+    "accountId": "8219485e-691f-40c9-b8b8-77be2a2fff00"
   }
-}</component>
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
 }</component>
@@ -40,7 +43,8 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true"
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "minkyu__test"
   }
 }]]></component>
   <component name="RecentsManager">
