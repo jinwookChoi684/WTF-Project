@@ -10,7 +10,7 @@ redis = Redis(host="localhost", port=6379, decode_responses=True)
 ########채팅 메시지 저장 기능########
 
 #채팅 메시지 저장(최근 10개의 메시지만 유지)
-def save_chat_message(pk: str, timestamp: str, message: str, emotion: str, keywords: list):
+def save_chat_message(pk: int, timestamp: str, message: str, emotion: str, keywords: list):
     key = f"chat:{pk}"
     data = {
         "userId": pk,
@@ -21,16 +21,16 @@ def save_chat_message(pk: str, timestamp: str, message: str, emotion: str, keywo
     redis.ltrim(key, -10, -1)
 
 #최근 채팅 메시지 불러오기
-def get_recent_messages(pk: str):
+def get_recent_messages(pk: int):
     raw = redis.lrange(f"chat:{pk}", 0, -1)
     return [json.loads(entry) for entry in raw]
 
 #사용자 정보 캐시에 저장(Redis는 문자열만 저장 가능하기에 json.dumps()로 문자열로 변환)
-def cache_user_info(pk: str, user_data: dict):
+def cache_user_info(pk: int, user_data: dict):
     redis.set(f"user:{pk}", json.dumps(user_data))
 
 #사용자 정보 캐시에서 가져오기()
-def get_cached_user_info(pk: str):
+def get_cached_user_info(pk: int):
     data = redis.get(f"user:{pk}")
     return json.loads(data) if data else None
 

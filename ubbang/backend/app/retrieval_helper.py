@@ -23,7 +23,7 @@ embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
 
 # ✅ 유저 대화 불러오기
-def load_user_documents(pk: str) -> list[Document]:
+def load_user_documents(pk: int) -> list[Document]:
     dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
     table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages"))
 
@@ -43,14 +43,14 @@ def load_user_documents(pk: str) -> list[Document]:
     return docs
 
 # ✅ 벡터스토어 생성
-def create_vectorstore_from_user_logs(pk: str) -> FAISS:
+def create_vectorstore_from_user_logs(pk: int) -> FAISS:
     documents = load_user_documents(pk)
     splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
     split_docs = splitter.split_documents(documents)
     return FAISS.from_documents(split_docs, embedding=embedding)
 
 # ✅ RAG 응답 생성
-def get_rag_response(message: str, pk: str, system_prompt: str, memory) -> str:
+def get_rag_response(message: str, pk: int, system_prompt: str, memory) -> str:
     vectorstore = create_vectorstore_from_user_logs(pk)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
     docs = retriever.get_relevant_documents(message)
