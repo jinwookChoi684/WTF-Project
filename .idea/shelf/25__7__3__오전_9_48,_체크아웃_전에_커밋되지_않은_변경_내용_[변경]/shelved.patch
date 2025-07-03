@@ -1,0 +1,19 @@
+Index: ubbang/backend/app/diary.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from fastapi import APIRouter, Query\r\nfrom pydantic import BaseModel\r\nfrom typing import List\r\nimport os\r\nimport openai\r\nfrom datetime import datetime\r\nfrom .utils import analyze_emotion, summarize_text, generate_image\r\nfrom .chat import get_chat_history  # DynamoDB에서 유저 채팅 불러오는 함수\r\nfrom .diary_db import get_diary_entries\r\nfrom .diary_db import save_diary_entry\r\naaaaaa\r\nrouter = APIRouter()\r\n\r\nopenai.api_key = os.getenv(\"OPENAI_API_KEY\")\r\n\r\nclass DiaryResponse(BaseModel):\r\n    title: str\r\n    content: str\r\n    emotion: str\r\n    summary: str\r\n    image_url: str\r\n\r\nclass DiaryEntry(BaseModel):\r\n    pk: str\r\n    id: str\r\n    userId: str\r\n    date: datetime\r\n    title: str\r\n    content: str\r\n    emotion: str\r\n    summary: str\r\n    image_url: str\r\n\r\n@router.get(\"/diary/entries\", response_model=List[DiaryEntry])\r\nasync def fetch_diary_entries(pk: str = Query(...)):\r\n    entries = get_diary_entries(pk)\r\n    return entries\r\n\r\n@router.get(\"/diary\", response_model=DiaryResponse)\r\nasync def generate_diary(pk: str = Query(...)):\r\n    chat_history = get_chat_history(pk)\r\n    combined_text = \" \".join([msg[\"content\"] for msg in chat_history if msg[\"role\"] == \"user\"])\r\n\r\n    emotion = analyze_emotion(combined_text)\r\n    summary = summarize_text(combined_text)\r\n    content = f\"{summary} 상담을 통해 내 마음을 더 잘 이해하게 되었다.\"\r\n    title = {\r\n        \"happy\": \"밝은 하루\", \"sad\": \"생각이 많은 날\", \"neutral\": \"평범한 일상\",\r\n        \"excited\": \"설레는 순간\", \"anxious\": \"복잡한 하루\"\r\n    }.get(emotion, \"감정의 기록\")\r\n    image_url = generate_image(emotion)\r\n\r\n    save_diary_entry(pk, title, content, emotion, summary, image_url)\r\n\r\n    return DiaryResponse(\r\n        title=title,\r\n        content=content,\r\n        emotion=emotion,\r\n        summary=summary,\r\n        image_url=image_url\r\n    )\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/ubbang/backend/app/diary.py b/ubbang/backend/app/diary.py
+--- a/ubbang/backend/app/diary.py	(revision 9daa76b32d94e1b7aa75bb4ae77ef94c2c759faf)
++++ b/ubbang/backend/app/diary.py	(date 1751503557233)
+@@ -8,7 +8,7 @@
+ from .chat import get_chat_history  # DynamoDB에서 유저 채팅 불러오는 함수
+ from .diary_db import get_diary_entries
+ from .diary_db import save_diary_entry
+-aaaaaa
++aaaa
+ router = APIRouter()
+ 
+ openai.api_key = os.getenv("OPENAI_API_KEY")
