@@ -5,8 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a3311d9e-8a2b-4118-b59a-085f91c685f5" name="변경" comment="aaa">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ubbang/backend/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/docker_files/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/docker_files/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/pnpm-lock.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,12 +29,12 @@
     &quot;assignee&quot;: &quot;dktk1920&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/jinwookChoi684/WTF-Project.git",
-    "accountId": "8219485e-691f-40c9-b8b8-77be2a2fff00"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/jinwookChoi684/WTF-Project.git&quot;,
+    &quot;accountId&quot;: &quot;8219485e-691f-40c9-b8b8-77be2a2fff00&quot;
   }
-}]]></component>
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
 }</component>
@@ -44,6 +46,8 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "minkyu__test"
   }
 }]]></component>
@@ -52,13 +56,14 @@
       <recent name="C:\Users\oljj\PycharmProjects\WTF-Project\ubbang" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\oljj\PycharmProjects\WTF-Project\ubbang\docker_files" />
       <recent name="C:\Users\oljj\PycharmProjects\WTF-Project\ubbang\backend" />
     </key>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-d7ad00fb9fc3-c546a90a8094-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.23726.102" />
+        <option value="bundled-python-sdk-53e2683a6804-9cdd278e9d02-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-251.26094.141" />
       </set>
     </attachedChunks>
   </component>
@@ -119,11 +124,31 @@
       <option name="project" value="LOCAL" />
       <updated>1751503733251</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="aaa">
+      <option name="closed" value="true" />
+      <created>1751546061170</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1751546061170</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="aa" />
-    <option name="LAST_COMMIT_MESSAGE" value="aa" />
+    <MESSAGE value="aaa" />
+    <option name="LAST_COMMIT_MESSAGE" value="aaa" />
   </component>
 </project>
