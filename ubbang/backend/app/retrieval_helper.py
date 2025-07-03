@@ -55,6 +55,12 @@ def get_rag_response(message: str, pk: str, system_prompt: str, memory) -> str:
     retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
     docs = retriever.get_relevant_documents(message)
 
+    # ✅ 현재 세션 memory 반영 (최신 대화 앞부분에 추가)
+    recent_messages = memory.chat_memory.messages[-10:]  # 최근 5개 대화만 반영
+    for m in recent_messages:
+        if hasattr(m, "content"):
+            docs.insert(0, Document(page_content=m.content, metadata={"source": "memory"}))
+
     prompt = ChatPromptTemplate.from_messages([
         ("system", "{system_prompt}"),
         ("user", "다음은 너랑 유저가 예전에 했던 대화들이야. 말투는 시스템 프롬프트 모드 설정값으로 유지해. 이걸 참고해서 지금 유저가 한 질문에 자연스럽게 대답해줘.\n\n{context}\n\n질문: {question}")
