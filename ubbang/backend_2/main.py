@@ -31,7 +31,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 app = FastAPI()
 app.include_router(chat.router)
-# app.include_router(diary.router)
+app.include_router(diary.router)
 app.include_router(user_router)
 origins = [
     "http://localhost:3000"

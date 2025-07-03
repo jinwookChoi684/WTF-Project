@@ -5,11 +5,11 @@ import textwrap
 
 
 class BasePromptBuilder:
-    def __init__(self, gender: str, mode: str, age: int, tf: str = None):
+    def __init__(self, gender: str, mode: str, age: int, personality_TF_type: str = None):
         self.mode = mode
         self.gender = gender
         self.age = age
-        self.tf = tf
+        self.personality_TF_type = personality_TF_type
 
     def build(self) -> str:
         return "\n\n".join([
@@ -77,7 +77,7 @@ class BasePromptBuilder:
 
     # --- 4.T/F 문제해결접근 말투 -------------------------------------------------------
     def _build_personality_TF_type(self) -> str:
-        if self.tf == "T":
+        if self.personality_TF_type == "T":
             return textwrap.dedent("""\
             사용자는 감정보다 논리적 사고와 문제 해결을 중시하는 성향입니다.
             위로나 감성적인 말보다, 상황에 대한 명확한 판단과 실질적인 조언을 원합니다.
