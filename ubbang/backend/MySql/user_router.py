@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -7,7 +8,7 @@ from redis_client import r
 import jwt
 from datetime import datetime, timedelta
 import os
-
+a
 router = APIRouter()
 SECRET_KEY = os.getenv("SECRET_KEY", "devsecret")
 ALGORITHM = "HS256"
