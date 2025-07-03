@@ -8,8 +8,7 @@ from redis_client import r
 import jwt
 from datetime import datetime, timedelta
 import os
-a
-router = APIRouter()
+auter = APIRouter()
 SECRET_KEY = os.getenv("SECRET_KEY", "devsecret")
 ALGORITHM = "HS256"
 
