@@ -2,3 +2,12 @@ fastapi
 uvicorn
 python-dotenv
 openai
+pymysql
+boto3
+redis_client
+cryptography
+passlib
+sqlalchemy
+langchain_openai
+langchain
+langchain_community
