@@ -42,7 +42,7 @@ def save_message_to_dynamo(pk: str, userId: str,  role: str, content: str, gende
             Item={
                 "pk": str(pk),                  # 파티션 키
                 "timestamp": int(time.time()),  # 정렬 키
-                "userId": str(userId),        # 참고용
+                "userId": str(userId),          # 참고용
                 "gender": gender,
                 "tf": str(tf),
                 "role": role,
