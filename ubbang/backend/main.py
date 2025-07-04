@@ -35,8 +35,7 @@ app.include_router(chat.router)
 app.include_router(diary.router)
 app.include_router(user_router)
 origins = [
-    "http://localhost:3000",
-    "http://172.30.1.4:3000"
+    "http://localhost:3000"
 ]
 
 app.add_middleware(
