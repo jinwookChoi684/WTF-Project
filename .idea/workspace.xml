@@ -4,8 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a3311d9e-8a2b-4118-b59a-085f91c685f5" name="변경" comment="aaa">
+    <list default="true" id="a3311d9e-8a2b-4118-b59a-085f91c685f5" name="변경" comment="aa">
+      <change beforePath="$PROJECT_DIR$/.idea/WTF-Project.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/WTF-Project.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/MySql/user_router.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/MySql/user_router.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/redis_utiles/redis_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/redis_utiles/redis_client.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ubbang/backend/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/package-lock.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,12 +34,12 @@
     &quot;assignee&quot;: &quot;dktk1920&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/jinwookChoi684/WTF-Project.git&quot;,
-    &quot;accountId&quot;: &quot;8219485e-691f-40c9-b8b8-77be2a2fff00&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/jinwookChoi684/WTF-Project.git",
+    "accountId": "a38aef2e-e069-47eb-959f-91d82ed12f62"
   }
-}</component>
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
 }</component>
@@ -47,11 +55,12 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "minkyu__test",
-    "last_opened_file_path": "C:/Users/hi/PycharmProjects/WTF-Project/ubbang/backend"
+    "last_opened_file_path": "C:/Users/hi/PycharmProjects/WTF-Project/ubbang/backend/MySql"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\hi\PycharmProjects\WTF-Project\ubbang\backend\MySql" />
       <recent name="C:\Users\hi\PycharmProjects\WTF-Project\ubbang\backend" />
       <recent name="C:\Users\oljj\PycharmProjects\WTF-Project\ubbang" />
     </key>
@@ -63,7 +72,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-53e2683a6804-9cdd278e9d02-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-251.26094.141" />
+        <option value="bundled-python-sdk-d7ad00fb9fc3-c546a90a8094-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.23726.102" />
       </set>
     </attachedChunks>
   </component>
@@ -140,7 +149,15 @@
       <option name="project" value="LOCAL" />
       <updated>1751550126404</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="aa">
+      <option name="closed" value="true" />
+      <created>1751590062160</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1751590062160</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -155,8 +172,19 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="aa" />
     <MESSAGE value="aaa" />
-    <option name="LAST_COMMIT_MESSAGE" value="aaa" />
+    <MESSAGE value="aa" />
+    <option name="LAST_COMMIT_MESSAGE" value="aa" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ubbang/backend/app/openai_helper.py</url>
+          <line>20</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

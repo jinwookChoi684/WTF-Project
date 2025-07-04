@@ -1,4 +1,4 @@
-fastapi
+fastapi[standard]
 uvicorn
 python-dotenv
 openai
@@ -6,8 +6,10 @@ pymysql
 boto3
 redis
 cryptography
-passlib
 sqlalchemy
 langchain_openai
 langchain
 langchain_community
+dotenv
+passlib[bcrypt]
+MySql

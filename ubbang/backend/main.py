@@ -17,7 +17,7 @@ from app import chat
 from app import diary
 from MySql.user_router import router as user_router
 # from redis_utiles.redis_client import save_chat_message, get_recent_messages, cache_user_info
-from redis_client import r     # redis_client.py에서 r 객체 import
+# from redis_client import r     # redis_client.py에서 r 객체 import
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
