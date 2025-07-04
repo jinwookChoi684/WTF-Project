@@ -22,7 +22,7 @@ from .weather import get_weather
 from .utils import extract_city_from_message, get_today_date
 from .retrieval_helper import get_rag_response
 from .naver_helper import get_external_info
-
+print("✅ chat.py WebSocket 라우터 로드됨")
 load_dotenv()
 router = APIRouter()
 dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
@@ -76,7 +76,7 @@ def restore_memory_from_dynamo(pk: int):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
-    pk = str(websocket.query_params.get("pk"))
+    pk = int(websocket.query_params.get("pk"))
     userId = websocket.query_params.get("userId", f"guest-{str(uuid.uuid4())}")
     gender = websocket.query_params.get("gender", "female")
     mode = websocket.query_params.get("mode", "banmal")
