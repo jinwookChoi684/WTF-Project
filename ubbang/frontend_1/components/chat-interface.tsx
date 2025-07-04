@@ -74,8 +74,8 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
       console.log("ℹ️ 이미 WebSocket 연결되어 있음. 중복 연결 생략")
       return
     }
-
-    const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}`
+    // 서버 가동시 ec2퍼블릭 ip로 교체
+    const wsUrl = `ws://3.34.143.48:8080/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}`
     console.log("📡 WebSocket 연결 URL:", wsUrl)
 
     ws.current = new WebSocket(wsUrl)
