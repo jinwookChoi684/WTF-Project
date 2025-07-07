@@ -1,4 +1,3 @@
-
 # 6/30 업데이트 -----------------------------------------------
 # history 리스트 제거, 대신 get_chatbot_response(pk, message) 호출
 # query_params에서 pk도 함께 받도록 수정
@@ -9,14 +8,15 @@
 
 # ✅ chat.py
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-import os, uuid, time, asyncio
+import os, uuid, time, asyncio, json
 from dotenv import load_dotenv
 import boto3
 from boto3.dynamodb.conditions import Key
+from decimal import Decimal
 
 from .openai_helper import (
     build_system_prompt, get_chatbot_response,
-    get_user_memory, detect_query_type,should_trigger_contextual_info
+    get_user_memory, detect_query_type, should_trigger_contextual_info
 )
 from .weather import get_weather
 from .utils import extract_city_from_message, get_today_date
@@ -28,13 +28,13 @@ router = APIRouter()
 dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
 table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages"))
 
-def save_message_to_dynamo(pk: int, userId: str,  role: str, content: str, gender: str):
+def save_message_to_dynamo(pk: int, userId: str, role: str, content: str, gender: str):
     try:
         table.put_item(
             Item={
-                "pk": int(pk),                  # 파티션 키
-                "timestamp": int(time.time()),  # 정렬 키
-                "userId": str(userId),        # 참고용
+                "pk": int(pk),
+                "timestamp": int(time.time()),
+                "userId": str(userId),
                 "gender": gender,
                 "role": role,
                 "content": content,
@@ -44,8 +44,7 @@ def save_message_to_dynamo(pk: int, userId: str,  role: str, content: str, gende
     except Exception as e:
         print(f"[ERROR] 메시지 저장 실패: {e}")
 
-
-def get_chat_history(pk: int, limit: int = 200) -> list[dict]:  # ✅ limit 증가
+def get_chat_history(pk: int, limit: int = 200) -> list[dict]:
     try:
         response = table.query(
             KeyConditionExpression=Key("pk").eq(pk),
@@ -72,6 +71,12 @@ def restore_memory_from_dynamo(pk: int):
         elif role == "assistant":
             memory.chat_memory.add_ai_message(content)
 
+# Decimal 직렬화 안전 변환기
+def decimal_default(obj):
+    if isinstance(obj, Decimal):
+        return int(obj) if obj == int(obj) else float(obj)
+    raise TypeError
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -90,12 +95,12 @@ async def websocket_endpoint(websocket: WebSocket):
     # ✅ WebSocket 연결 직후 과거 메시지 전송
     previous_history = get_chat_history(pk)
     for item in previous_history:
-        await websocket.send_json({
+        await websocket.send_text(json.dumps({
             "type": "history",
             "role": item["role"],
             "content": item["content"],
             "timestamp": item["timestamp"],
-        })
+        }, default=decimal_default))
 
     try:
         while True:
@@ -134,4 +139,3 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"[FATAL ERROR] WebSocket 처리 중 예외 발생: {e}")
         await websocket.close()
-

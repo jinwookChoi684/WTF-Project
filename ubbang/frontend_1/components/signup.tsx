@@ -1,7 +1,7 @@
 "use client"
 
-import { useUser } from "@/hooks/useUser"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,21 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarIcon } from "lucide-react"
 import { Calendar as DatePicker } from "@/components/ui/calendar"
 
-interface SignupProps {
-  onComplete: (userData: {
-    pk: number
-    name: string
-    userId: string
-    gender: string
-    mode: string
-    worry: string
-    birthDate: string
-  }) => void
-  onBack: () => void
-}
-
-export default function Signup({ onComplete, onBack }: SignupProps) {
-  const { setUser } = useUser()
+export default function Signup() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     userId: "",
@@ -38,7 +25,8 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     gender: "",
     worry: "",
     birthDate: "",
-    mode:"",
+    mode: "",
+    currentConcern: "",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -55,17 +43,17 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     const newErrors: Record<string, string> = {}
 
     if (!formData.userId.trim()) newErrors.userId = "아이디를 입력해주세요"
-    if (formData.userId.length < 4) newErrors.userId = "아이디는 4자 이상이어야 합니다"
+    else if (formData.userId.length < 4) newErrors.userId = "아이디는 4자 이상이어야 합니다"
 
     if (!formData.password.trim()) newErrors.password = "비밀번호를 입력해주세요"
-    if (formData.password.length < 6) newErrors.password = "비밀번호는 6자 이상이어야 합니다"
+    else if (formData.password.length < 6) newErrors.password = "비밀번호는 6자 이상이어야 합니다"
 
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "비밀번호가 일치하지 않습니다"
     }
 
     if (!formData.email.trim()) newErrors.email = "이메일을 입력해주세요"
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "올바른 이메일 형식이 아닙니다"
     }
 
@@ -77,94 +65,69 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     return Object.keys(newErrors).length === 0
   }
 
-const handleSubmit = async () => {
-  console.log("폼 제출 시도됨")
+  const handleSubmit = async () => {
+    if (!validateForm()) return
 
-  if (!validateForm()) {
-    console.log("유효성 검사 실패")
-    console.log("입력값 확인:", formData)
-    return
-  }
+    setStep("submitting")
 
-  console.log("Fetch 요청 보냄!")
-
-  setStep("submitting")
-
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-      name: formData.name,
-      userId: formData.userId,
-      password: formData.password,
-      email: formData.email,
-      gender: formData.gender,
-      birthDate: formData.birthDate,
-      socialId: formData.socialId || null,
-      mode: formData.mode,
-      worry: formData.currentConcern || null,
-      age: Number(formData.age),
-      }),
-    })
-    console.log("✅ BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL)
-
-    console.log("응답 상태코드:", response.status)
-
-    const responseClone = response.clone()
-    const resText = await responseClone.text()
-    console.log("서버 응답 텍스트:", resText)
-
-    if (response.ok) {
-      const data = await response.json()
-      console.log("✅ 가입 완료:", data)
-
-      // ✅ 로그인과 동일한 형식으로 localStorage 저장
-    const localStorageUserData = {
-      pk: data.pk,
-      userId: data.userId,
-      name: data.name,
-      gender: data.gender,
-      mode: data.mode,
-      worry: data.worry,
-      birthDate: data.birthDate,
-      loginMethod: data.loginMethod,
-    }
-    localStorage.setItem("user", JSON.stringify(localStorageUserData))
-
-      setStep("complete")
-
-      setTimeout(() => {
-        const onCompleteUserData = {
-          pk: data.pk, // ← 서버에서 받아온 응답에 포함되어야 함
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           name: formData.name,
           userId: formData.userId,
+          password: formData.password,
+          email: formData.email,
           gender: formData.gender,
-          mode: formData.mode,
-          worry: formData.currentConcern || "",
           birthDate: formData.birthDate,
+          socialId: formData.socialId || null,
+          mode: formData.mode,
+          worry: formData.currentConcern || null,
+          age: Number(formData.age),
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+
+        const localStorageUserData = {
+          pk: data.pk,
+          userId: data.userId,
+          name: data.name,
+          gender: data.gender,
+          mode: data.mode,
+          worry: data.worry,
+          birthDate: data.birthDate,
+          loginMethod: "이메일 계정",
         }
-        onComplete(onCompleteUserData)
+
+        localStorage.setItem("user", JSON.stringify(localStorageUserData))
+        setStep("complete")
+
+        setTimeout(() => {
+          router.push("/chat")
         }, 1500)
-    } else {
-      console.error("❌ 회원가입 실패:", resText)
-      alert("회원가입 중 오류가 발생했습니다.")
+      } else {
+        const text = await response.text()
+        console.error("❌ 회원가입 실패:", text)
+        alert("회원가입 중 오류가 발생했습니다.")
+        setStep("form")
+      }
+    } catch (error) {
+      console.error("❌ 서버 연결 실패:", error)
+      alert("서버에 연결할 수 없습니다.")
       setStep("form")
     }
-  } catch (error) {
-    console.error("❌ 서버 연결 실패:", error)
-    alert("서버에 연결할 수 없습니다.")
-    setStep("form")
   }
-}
 
   const generateAgeOptions = () => {
     const options = []
     for (let i = 13; i <= 80; i++) {
-    options.push(
-      <SelectItem key={i} value={i.toString()}>
+      options.push(
+        <SelectItem key={i} value={i.toString()}>
           {i}세
         </SelectItem>
       )
@@ -176,12 +139,13 @@ const handleSubmit = async () => {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
       <div className="w-full max-w-md space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-600 hover:text-gray-800">
+          <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="text-gray-600 hover:text-gray-800">
             <ArrowLeft className="w-4 h-4 mr-2" />
             돌아가기
           </Button>
         </div>
 
+        {/* 이후 UI 구성은 기존과 동일하게 유지 */}
         {step === "form" && (
           <>
             <div className="text-center space-y-4">

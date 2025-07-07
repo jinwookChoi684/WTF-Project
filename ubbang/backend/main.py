@@ -1,56 +1,55 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from passlib.context import CryptContext
+from pydantic import BaseModel
+from dotenv import load_dotenv
+from openai import OpenAI
+from app import chat, diary
 from MySql.database import SessionLocal, engine, Base
 from MySql.models import User
 from MySql.schemas import UserCreate, UserLogin, UserLoginResponse
-from fastapi.middleware.cors import CORSMiddleware
-from passlib.context import CryptContext
-from pydantic import BaseModel
-from MySql import models
-from dotenv import load_dotenv
-from openai import OpenAI
-from datetime import datetime
-import os
-import logging  # 로깅 모듈 임포트
-from app import chat
-from app import diary
 from MySql.user_router import router as user_router
-# from redis_utiles.redis_client import save_chat_message, get_recent_messages, cache_user_info
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+import httpx, logging, os
 
 load_dotenv()
 
+# 환경변수 로드
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("REDIRECT_URI")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    logger.error("OPENAI_API_KEY 환경 변수가 설정되지 않았습니다.")
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+# 로깅 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+# FastAPI 앱 초기화
 app = FastAPI()
 app.include_router(chat.router)
 app.include_router(diary.router)
-app.include_router(user_router)
-origins = [
-    "http://localhost:3000"
-]
+# app.include_router(user_router)
+app.include_router(user_router, prefix="/users", tags=["users"])  # ✅ 등록
 
+# 미들웨어 추가 (CORS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# DB 초기화
 try:
     Base.metadata.create_all(bind=engine)
-    logger.info("✅ 데이터베이스 연결 성공 및 테이블 생성 완료")
+    logger.info("✅ DB 연결 및 테이블 생성 완료")
 except SQLAlchemyError as e:
-    logger.critical(f"❌ 데이터베이스 연결 또는 테이블 생성 실패: {e}")
+    logger.error(f"❌ DB 연결 실패: {e}")
 
+# DB 세션 생성 함수
 async def get_db():
     db = SessionLocal()
     try:
@@ -58,98 +57,26 @@ async def get_db():
     finally:
         db.close()
 
+# 비밀번호 암호화 설정
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# OpenAI 클라이언트 초기화
+client = OpenAI(api_key=OPENAI_API_KEY)
+
 @app.get("/")
-async def root():  # 비동기 함수로 변경
-    return {"message": "서버 잘 켜졌어! 🎉"}
+async def root():
+    return {"message": "서버 켜짐"}
 
-@app.post("/signup")
-async def signup(user: UserCreate, db: Session = Depends(get_db)):
-    logger.info(f"🚀 /signup 요청 도착! 사용자 ID: {user.userId}")
-
-    db_user = db.query(User).filter(User.userId == user.userId).first()
-    if db_user:
-        logger.warning(f"⚠️ 이미 존재하는 아이디: {user.userId}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미 사용 중인 아이디입니다."
-        )
-
-    hashed_password = pwd_context.hash(user.password)
-
-    new_user = User(
-        userId=user.userId,
-        name=user.name,
-        password=hashed_password,
-        email=user.email,
-        birthDate=user.birthDate,
-        gender=user.gender,
-        mode=user.mode,
-        worry=user.worry,
-        socialId=user.socialId,
-        age=user.age
-    )
-
-    try:
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        logger.info(f"✅ 회원가입 성공: {new_user.userId}")
-
-        # Redis 캐싱
-        # cache_user_info(
-        #     new_user.userId,
-        #     {
-        #         "name": new_user.name,
-        #         "email": new_user.email,
-        #         "gender": new_user.gender,
-        #         "birthDate": str(new_user.birthDate),
-        #     }
-        # )
-        return {"message": "회원가입 성공",
-                "pk": new_user.pk,
-                "userId": new_user.userId,
-                "name": new_user.name,
-                "gender": new_user.gender,
-                "mode": new_user.mode,
-                "worry": new_user.worry,
-                "birthDate": new_user.birthDate
-                }
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"❌ 회원가입 중 DB 오류 발생: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="회원가입 중 데이터베이스 오류가 발생했습니다."
-        )
-
-# 비회원 가입시 로그인 강제 처리
-@app.post("/users")
-async def create_user_alias(user: UserCreate, db: Session = Depends(get_db)):
-    return await signup(user, db)
-
-
+# ✅ 기존 로그인 API 복구
 @app.post("/login", response_model=UserLoginResponse)
 async def login(user: UserLogin, db: Session = Depends(get_db)):
-    logger.info(f"🚪 로그인 시도: {user.userId}")
     db_user = db.query(User).filter(User.userId == user.userId).first()
 
     if not db_user:
-        logger.warning(f"❌ 사용자 없음: {user.userId}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="존재하지 않는 사용자입니다."
-        )
-
+        raise HTTPException(status_code=404, detail="존재하지 않는 사용자입니다.")
     if not pwd_context.verify(user.password, db_user.password):
-        logger.warning(f"❌ 비밀번호 불일치: {user.userId}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="비밀번호가 일치하지 않습니다."
-        )
+        raise HTTPException(status_code=401, detail="비밀번호가 일치하지 않습니다.")
 
-    logger.info(f"✅ 로그인 성공: {db_user.userId}")
     return {
         "pk": db_user.pk,
         "userId": db_user.userId,
@@ -160,96 +87,146 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
         "birthDate": str(db_user.birthDate),
         "loginMethod": "이메일 계정",
         "isAnonymous": False
-
     }
 
-class DeleteRequest(BaseModel):
-    userId: str
+# ✅ 구글 로그인 진입점
+@app.get("/auth/google/login")
+def google_login():
+    url = (
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        f"?client_id={GOOGLE_CLIENT_ID}"
+        f"&redirect_uri={GOOGLE_REDIRECT_URI}"
+        f"&response_type=code"
+        f"&scope=openid%20email%20profile"
+        f"&access_type=offline"
+        f"&prompt=consent"
+    )
+    return RedirectResponse(url)
 
-@app.post("/delete-user")
-async def delete_user(request: DeleteRequest, db: Session = Depends(get_db)):
-    logger.info(f"🗑️ 사용자 삭제 요청: {request.userId}")
-    user_to_delete = db.query(models.User).filter(models.User.userId == request.userId).first()
-    if not user_to_delete:
-        logger.warning(f"❌ 삭제할 사용자 없음: {request.userId}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+# ✅ 구글 로그인 콜백
+@app.get("/auth/google/callback")
+async def google_callback(request: Request, db: Session = Depends(get_db)):
+    code = request.query_params.get("code")
+    if not code:
+        raise HTTPException(status_code=400, detail="코드 없음")
+
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": code,
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uri": GOOGLE_REDIRECT_URI,
+                "grant_type": "authorization_code",
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
-    try:
-        db.delete(user_to_delete)
+        token_data = token_resp.json()
+        access_token = token_data.get("access_token")
+
+    if not access_token:
+        raise HTTPException(status_code=400, detail="토큰 획득 실패")
+
+    async with httpx.AsyncClient() as client:
+        user_resp = await client.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+    user_info = user_resp.json()
+
+    email = user_info.get("email")
+    name = user_info.get("name")
+    social_id = user_info.get("id")
+
+    user = db.query(User).filter(User.userId == email).first()
+    if not user:
+        user = User(
+            userId=email,
+            name=name,
+            email=email,
+            password="",
+            socialId=social_id,
+            gender="",
+            birthDate=None,
+            worry="",
+            mode="",
+            age=0,
+        )
+        db.add(user)
         db.commit()
-        logger.info(f"✅ 사용자 삭제 성공: {request.userId}")
-        return {"message": "User deleted successfully"}
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"❌ 사용자 삭제 중 DB 오류 발생: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="사용자 삭제 중 데이터베이스 오류가 발생했습니다."
-        )
+        db.refresh(user)
 
-class ChatInput(BaseModel):
-    userId: str
-    message: str
+    return RedirectResponse(f"http://localhost:3000/extra-info?pk={user.pk}")
 
-@app.post("/chat")
-async def chat_with_ai(chat: ChatInput):
-    logger.info(f"💬 챗 요청 수신 - userId: {chat.userId}, message: {chat.message[:50]}...")
+# ✅ 추가 정보 업데이트 API
+class ExtraInfoUpdate(BaseModel):
+    pk: int
+    gender: str
+    birthDate: str
+    worry: str
+    mode: str
+    age: int
 
-    if not OPENAI_API_KEY:
-        logger.error("OpenAI API 키가 없어 AI 응답을 생성할 수 없습니다.")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI 서비스 준비 중입니다. 잠시 후 다시 시도해주세요."
-        )
+@app.patch("/users/update-info")
+async def update_extra_info(info: ExtraInfoUpdate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.pk == info.pk).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자 없음")
 
-    try:
-        context = []  # 임시로 빈 리스트, 실제 Redis 연동 시 수정
-        prompt_messages = [
-            {"role": "system", "content": "You are a warm, empathetic assistant replying in Korean."},
-            {"role": "user", "content": chat.message},
-        ]
-        try:
-            response = await client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=prompt_messages
-            )
-            reply_text = response.choices[0].message.content.strip()
-            logger.info(f"✅ GPT 응답 성공 (userId: {chat.userId})")
-        except Exception as gpt_error:
-            logger.error(f"⚠️ GPT 호출 실패 (userId: {chat.userId}): {gpt_error}")
-            reply_text = "죄송합니다. 현재 답변을 생성할 수 없습니다. 잠시 후 다시 시도해주세요."
+    user.gender = info.gender
+    user.birthDate = info.birthDate
+    user.worry = info.worry
+    user.mode = info.mode
+    user.age = info.age
 
-        # Redis 저장
-        # timestamp = datetime.now().isoformat()
-        # await save_chat_message(
-        #     pk=chat.userId,
-        #     timestamp=timestamp,
-        #     message=chat.message
-        # )
+    db.commit()
+    db.refresh(user)
 
-        return {
-            "context": context,
-            "reply": reply_text,
-        }
+    return {
+        "pk": user.pk,
+        "userId": user.userId,
+        "name": user.name,
+        "gender": user.gender,
+        "mode": user.mode,
+        "worry": user.worry,
+        "birthDate": str(user.birthDate),
+        "loginMethod": "Google OAuth",
+        "isAnonymous": False
+    }
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.critical(f"🔥 예기치 않은 서버 오류 발생 (userId: {chat.userId}): {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="AI 응답 생성 중 예기치 않은 서버 오류가 발생했습니다."
-        )
+# 회원가입
+@app.post("/signup")
+async def signup(user: UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.userId == user.userId).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="이미 존재하는 아이디입니다.")
 
-# ✅ 감정 히스토리 및 컨텍스트 조회용 API
-# @app.get("/chat/context/{pk}")
-# def get_chat_context(pk: str):
-#     messages = get_recent_messages(pk)
-#     return {"recent_messages": messages}
-#
-# @app.get("/chat/emotions/{pk}")
-# def get_emotions(pk: str, limit: int = 10):
-#     records = get_emotion_history(pk, limit)
-#     return {"emotion_history": records}
+    hashed_password = pwd_context.hash(user.password)
+    new_user = User(
+        userId=user.userId,
+        name=user.name,
+        password=hashed_password,
+        email=user.email,
+        gender=user.gender,
+        birthDate=user.birthDate,
+        worry=user.worry,
+        mode=user.mode,
+        age=user.age,
+        socialId=user.socialId,
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {
+        "pk": new_user.pk,
+        "userId": new_user.userId,
+        "name": new_user.name,
+        "gender": new_user.gender,
+        "mode": new_user.mode,
+        "worry": new_user.worry,
+        "birthDate": str(new_user.birthDate),
+        "loginMethod": "이메일 계정",
+    }

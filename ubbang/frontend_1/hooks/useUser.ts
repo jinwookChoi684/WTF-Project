@@ -7,17 +7,18 @@ export function useUser() {
   const [user, _setUser] = useState<any>(null)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser)
-      globalUser = parsed
-      _setUser(parsed)
+    // ✅ 클라이언트에서만 실행되도록 체크
+    if (typeof window !== "undefined") {
+      const storedUser = localStorage.getItem("user")
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser)
+        globalUser = parsed
+        _setUser(parsed)
+      }
+
+      setGlobalUser = _setUser
     }
-
-    // ✅ useEffect 안에서 setGlobalUser 설정
-    setGlobalUser = _setUser
   }, [])
-
   return {
     user,
     setUser: (val: any) => {
