@@ -6,7 +6,7 @@ from datetime import datetime
 dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
 diary_table = dynamodb.Table("DiaryEntries")  # 테이블 이름 정확히 확인
 
-def get_diary_entries(pk: int) -> list[dict]:
+def get_diary_entries(pk: str) -> list[dict]:
     try:
         response = diary_table.query(
             KeyConditionExpression=Key("pk").eq(pk),
@@ -18,7 +18,7 @@ def get_diary_entries(pk: int) -> list[dict]:
         return []
 
 # 생성된 일기 저장
-def save_diary_entry(pk: int, title: str, content: str, emotion: str, summary: str, image_url: str):
+def save_diary_entry(pk: str, title: str, content: str, emotion: str, summary: str, image_url: str):
     item = {
         "pk": pk,
         "id": str(uuid.uuid4()),

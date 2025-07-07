@@ -21,7 +21,7 @@ class DiaryResponse(BaseModel):
     image_url: str
 
 class DiaryEntry(BaseModel):
-    pk: int
+    pk: str
     id: str
     userId: str
     date: datetime
@@ -32,12 +32,12 @@ class DiaryEntry(BaseModel):
     image_url: str
 
 @router.get("/diary/entries", response_model=List[DiaryEntry])
-async def fetch_diary_entries(pk: int = Query(...)):
+async def fetch_diary_entries(pk: str = Query(...)):
     entries = get_diary_entries(pk)
     return entries
 
 @router.get("/diary", response_model=DiaryResponse)
-async def generate_diary(pk: int = Query(...)):
+async def generate_diary(pk: str = Query(...)):
     chat_history = get_chat_history(pk)
     combined_text = " ".join([msg["content"] for msg in chat_history if msg["role"] == "user"])
 

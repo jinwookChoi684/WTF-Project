@@ -96,13 +96,13 @@ def build_system_prompt(gender: str, mode: str) -> str:
 user_memory_store = {}
 
 
-def get_user_memory(pk: int) -> ConversationBufferMemory:
+def get_user_memory(pk: str) -> ConversationBufferMemory:
     if pk not in user_memory_store:
         user_memory_store[pk] = ConversationBufferMemory(return_messages=True)
     return user_memory_store[pk]
 
 
-async def get_chatbot_response(pk: int, user_input: str, system_prompt: str, memory) -> str:
+async def get_chatbot_response(pk: str, user_input: str, system_prompt: str, memory) -> str:
     try:
         memory = get_user_memory(pk)
 

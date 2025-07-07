@@ -22,17 +22,17 @@ from .weather import get_weather
 from .utils import extract_city_from_message, get_today_date
 from .retrieval_helper import get_rag_response
 from .naver_helper import get_external_info
-print("✅ chat.py WebSocket 라우터 로드됨")
+
 load_dotenv()
 router = APIRouter()
 dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
 table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages"))
 
-def save_message_to_dynamo(pk: int, userId: str,  role: str, content: str, gender: str):
+def save_message_to_dynamo(pk: str, userId: str,  role: str, content: str, gender: str):
     try:
         table.put_item(
             Item={
-                "pk": int(pk),                  # 파티션 키
+                "pk": str(pk),                  # 파티션 키
                 "timestamp": int(time.time()),  # 정렬 키
                 "userId": str(userId),        # 참고용
                 "gender": gender,
@@ -45,7 +45,7 @@ def save_message_to_dynamo(pk: int, userId: str,  role: str, content: str, gende
         print(f"[ERROR] 메시지 저장 실패: {e}")
 
 
-def get_chat_history(pk: int, limit: int = 200) -> list[dict]:  # ✅ limit 증가
+def get_chat_history(pk: str, limit: int = 200) -> list[dict]:  # ✅ limit 증가
     try:
         response = table.query(
             KeyConditionExpression=Key("pk").eq(pk),
@@ -59,7 +59,7 @@ def get_chat_history(pk: int, limit: int = 200) -> list[dict]:  # ✅ limit 증�
         return []
 
 # ✅ LangChain memory 복원
-def restore_memory_from_dynamo(pk: int):
+def restore_memory_from_dynamo(pk: str):
     history = get_chat_history(pk, limit=200)
     memory = get_user_memory(pk)
     memory.chat_memory.messages.clear()
@@ -76,7 +76,7 @@ def restore_memory_from_dynamo(pk: int):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
-    pk = int(websocket.query_params.get("pk"))
+    pk = str(websocket.query_params.get("pk"))
     userId = websocket.query_params.get("userId", f"guest-{str(uuid.uuid4())}")
     gender = websocket.query_params.get("gender", "female")
     mode = websocket.query_params.get("mode", "banmal")
