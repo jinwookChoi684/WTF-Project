@@ -1,13 +1,4 @@
 
-# 6/30 업데이트 -----------------------------------------------
-# history 리스트 제거, 대신 get_chatbot_response(pk, message) 호출
-# query_params에서 pk도 함께 받도록 수정
-
-# 7/1 업데이트 -------------------------------------------------
-# 반말/존댓말 모드 + RAG/GPT 분기 + 외부검색 통합
-# 비회원 유저만 DynamoDB에 유저/챗봇 쌍으로 저장 + 성별 포함
-
-# ✅ chat.py
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import os, uuid, time, asyncio
 from dotenv import load_dotenv
@@ -19,13 +10,17 @@ from .BasePrompt_builder import BasePromptBuilder
 from .openai_helper import (
     get_chatbot_response,
     get_user_memory,
-    detect_query_type)
+    detect_query_type,
+    get_rag_response,
+    should_use_vector_search)
 
 from .weather import get_weather_data
 from .utils import extract_city_from_message, get_today_datetime_info
 from .contextual_info import get_contextual_info_reply, should_trigger_contextual_info
 from .naver_helper import get_external_info
 
+from .faiss_helper import save_to_faiss, search_from_faiss
+from datetime import datetime
 
 # -------------------------------------------------------------------------------
 
@@ -36,6 +31,19 @@ table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages"))
 
 # -------------------------------------------------------------------------------
 
+# 유저 활동 시간 업데이트 함수 (4시간 무응답 감지용)
+def update_last_active_time(pk: str):
+    try:
+        table.update_item(
+            Key={"pk": pk, "timestamp": 0},  # 유휴 추적용 dummy row
+            UpdateExpression="SET last_active_time = :t",
+            ExpressionAttributeValues={":t": int(time.time())}
+        )
+    except Exception as e:
+        print(f"[ERROR] last_active_time 업데이트 실패: {e}")
+
+
+# 메시지 저장
 def save_message_to_dynamo(pk: str, userId: str,  role: str, content: str, gender: str, tf: str):
     try:
         table.put_item(
@@ -54,7 +62,7 @@ def save_message_to_dynamo(pk: str, userId: str,  role: str, content: str, gende
         print(f"[ERROR] 메시지 저장 실패: {e}")
 
 
-
+# WebSocket 엔드포인트
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -75,6 +83,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # ✅ 메모리 복원 (LangChain)
     memory = get_user_memory(pk)
+
+    embedding_counter = 0
+    buffered_messages = []
     
 
     try:
@@ -82,8 +93,9 @@ async def websocket_endpoint(websocket: WebSocket):
             user_msg = await websocket.receive_text()
             print(f"👤 유저 메시지: {user_msg}")
 
-            # ✅ 1. 메시지 저장 (user)
+            # ✅ 1. 메시지 저장 (user) + 활동 시간 갱신
             save_message_to_dynamo(pk, userId, "user", user_msg, gender, tf)
+            update_last_active_time(pk)
 
             # ✅ 2. 날씨/시간 판단 → 자동응답
             contextual_reply = await get_contextual_info_reply(user_input=user_msg, system_prompt=system_prompt,memory=memory)
@@ -99,23 +111,49 @@ async def websocket_endpoint(websocket: WebSocket):
             print(f"🔍 쿼리 유형 감지: {query_type}")
 
             if query_type == "외부정보검색":
-                reply = get_external_info(user_msg, mode)
+                reply = get_external_info(user_msg, mode, memory)
+
+            elif should_use_vector_search(user_msg):
+                reply = await get_rag_response(user_msg, system_prompt, memory, pk)
             
             else:
-                reply = await get_chatbot_response(
-                    user_input=user_msg,
-                    system_prompt=system_prompt,
-                    memory=memory
+                # ✅ FAISS 벡터 검색 (유사한 과거 기억 보조용)
+                retrieved_context = search_from_faiss(pk, user_msg)
+
+                reply = await get_rag_response(
+                    user_input=user_input,
+                    memory=memory,
+                    pk=pk,
+                    gender=gender,
+                    mode=mode,
+                    age=age,
+                    tf=tf
                 )
 
-            # ✅ 4. 응답 저장 및 전송
+            # ✅ 4. 응답 저장 및 전송 + 활동 시간 갱신
             save_message_to_dynamo(pk, userId, "assistant", reply, gender, tf)
+            update_last_active_time(pk)
             memory.chat_memory.add_user_message(user_msg)
             memory.chat_memory.add_ai_message(reply)
             await websocket.send_text(reply)
+
+            # ✅ 5. FAISS 업데이트 (10턴 마다 저장)
+            buffered_messages.append({"role": "user", "content": user_msg})
+            buffered_messages.append({"role": "assistant", "content": reply})
+            embedding_counter += 1
+
+            if embedding_counter >= 10:
+                save_to_faiss(pk, buffered_messages)
+                embedding_counter = 0
+                buffered_messages = []
+
 
     except WebSocketDisconnect:
         print("❌ WebSocket 연결 끊김")
     except Exception as e:
         print(f"❌ 예외 발생: {e}")
         await websocket.send_text("⚠️ 오류가 발생했어요. 잠시 후 다시 시도해주세요.")
+    finally:
+        if buffered_messages:
+            print("📦 WebSocket 종료 시점 FAISS 저장 실행")
+            save_to_faiss(pk, buffered_messages)    
