@@ -17,7 +17,7 @@ interface Message {
 
 interface ChatInterfaceProps {
   initialUserInfo: {
-    pk: number
+    pk: Number
     name: string
     userId: string
     loginMethod: string
@@ -31,7 +31,6 @@ interface ChatInterfaceProps {
 export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   const { user } = useUser()
 
-  // ✅ Hook들 최상단 선언
   const ws = useRef<WebSocket | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState("")
@@ -41,35 +40,32 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // ✅ user fallback 처리
-    const activeUser = user ?? initialUserInfo ?? {}
-    const pk = activeUser.pk ?? 0
-    const userId = activeUser.userId ?? "anonymous"
-    const userName = activeUser.name ?? "사용자"
-    const gender = activeUser.gender ?? "female"
-    const mode = activeUser.mode ?? "banmal"
-   // 비회원
-   const localUser = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("userInfo") || "{}") : {}
+  const activeUser = user ?? initialUserInfo ?? {}
+  const pk = activeUser.pk ?? 0
+  const userId = activeUser.userId ?? "anonymous"
+  const userName = activeUser.name ?? "사용자"
+  const gender = activeUser.gender ?? "female"
+  const mode = activeUser.mode ?? "banmal"
 
   useEffect(() => {
-    setMessages([
-      {
-        id: "1",
-        content: `안녕하세요 ${userName}님! 저는 우빵이입니다. 오늘 하루는 어떠셨나요? 편안하게 이야기해 주세요.`,
-        sender: "ai",
-        timestamp: new Date(),
-      },
-    ])
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: "1",
+          content: `안녕하세요 ${userName}님! 저는 우빵이입니다. 오늘 하루는 어떠셨나요? 편안하게 이야기해 주세요.`,
+          sender: "ai",
+          timestamp: new Date(),
+        },
+      ])
+    }
   }, [userName])
 
   useEffect(() => {
-      // ✅ pk 유효성 검사: 0 또는 undefined면 연결 X
-      if (!pk) {
-        console.log("🚫 WebSocket 연결 생략: 유효하지 않은 pk", pk)
-        return
-      }
+    if (!pk) {
+      console.log("🚫 WebSocket 연결 생략: 유효하지 않은 pk", pk)
+      return
+    }
 
-    // ✅ 이미 연결된 경우 중복 방지
     if (ws.current) {
       console.log("ℹ️ 이미 WebSocket 연결되어 있음. 중복 연결 생략")
       return
@@ -81,14 +77,55 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
     ws.current = new WebSocket(wsUrl)
 
     ws.current.onmessage = (event) => {
-      const aiMessage: Message = {
-        id: Date.now().toString(),
-        content: event.data,
-        sender: "ai",
-        timestamp: new Date(),
+      try {
+        const isProbablyJson = event.data.startsWith("{") || event.data.startsWith("[")
+
+        if (isProbablyJson) {
+          const data = JSON.parse(event.data)
+
+          if (data.type === "history") {
+            const historyMessage: Message = {
+              id: data.timestamp.toString(),
+              content: data.content,
+              sender: data.role === "user" ? "user" : "ai",
+              timestamp: new Date(data.timestamp * 1000),
+            }
+
+            setMessages((prev) => {
+              const exists = prev.some((m) => m.id === historyMessage.id)
+              return exists ? prev : [...prev, historyMessage]
+            })
+          } else {
+            const aiMessage: Message = {
+              id: Date.now().toString(),
+              content: typeof data === "string" ? data : data.content,
+              sender: "ai",
+              timestamp: new Date(),
+            }
+            setMessages((prev) => [...prev, aiMessage])
+          }
+        } else {
+          const aiMessage: Message = {
+            id: Date.now().toString(),
+            content: event.data,
+            sender: "ai",
+            timestamp: new Date(),
+          }
+          setMessages((prev) => [...prev, aiMessage])
+        }
+
+        setIsTyping(false)
+      } catch (err) {
+        console.warn("❗️JSON 파싱 실패, fallback 처리:", err)
+        const fallbackMessage: Message = {
+          id: Date.now().toString(),
+          content: event.data,
+          sender: "ai",
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, fallbackMessage])
+        setIsTyping(false)
       }
-      setMessages((prev) => [...prev, aiMessage])
-      setIsTyping(false)
     }
 
     ws.current.onopen = () => console.log("✅ WebSocket 연결됨")
@@ -128,14 +165,11 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
       sender: "user",
       timestamp: new Date(),
     }
+
     ws.current?.send(inputMessage)
     setMessages((prev) => [...prev, userMessage])
     setInputMessage("")
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, 50);
+    setTimeout(() => inputRef.current?.focus(), 50)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

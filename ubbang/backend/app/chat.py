@@ -28,11 +28,11 @@ router = APIRouter()
 dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
 table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages"))
 
-def save_message_to_dynamo(pk: str, userId: str,  role: str, content: str, gender: str):
+def save_message_to_dynamo(pk: int, userId: str,  role: str, content: str, gender: str):
     try:
         table.put_item(
             Item={
-                "pk": str(pk),                  # 파티션 키
+                "pk": int(pk),                  # 파티션 키
                 "timestamp": int(time.time()),  # 정렬 키
                 "userId": str(userId),        # 참고용
                 "gender": gender,
@@ -45,7 +45,7 @@ def save_message_to_dynamo(pk: str, userId: str,  role: str, content: str, gende
         print(f"[ERROR] 메시지 저장 실패: {e}")
 
 
-def get_chat_history(pk: str, limit: int = 200) -> list[dict]:  # ✅ limit 증가
+def get_chat_history(pk: int, limit: int = 200) -> list[dict]:  # ✅ limit 증가
     try:
         response = table.query(
             KeyConditionExpression=Key("pk").eq(pk),
@@ -59,7 +59,7 @@ def get_chat_history(pk: str, limit: int = 200) -> list[dict]:  # ✅ limit 증�
         return []
 
 # ✅ LangChain memory 복원
-def restore_memory_from_dynamo(pk: str):
+def restore_memory_from_dynamo(pk: int):
     history = get_chat_history(pk, limit=200)
     memory = get_user_memory(pk)
     memory.chat_memory.messages.clear()
@@ -76,7 +76,7 @@ def restore_memory_from_dynamo(pk: str):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
-    pk = str(websocket.query_params.get("pk"))
+    pk = int(websocket.query_params.get("pk"))
     userId = websocket.query_params.get("userId", f"guest-{str(uuid.uuid4())}")
     gender = websocket.query_params.get("gender", "female")
     mode = websocket.query_params.get("mode", "banmal")
@@ -84,15 +84,23 @@ async def websocket_endpoint(websocket: WebSocket):
     print(f"📥 WebSocket 요청 들어옴: pk={pk}, user_id={userId}, mode={mode}, gender={gender}")
 
     memory = get_user_memory(pk)
-    restore_memory_from_dynamo(pk)  # ✅ 이전 대화 복원
+    restore_memory_from_dynamo(pk)
     system_prompt = build_system_prompt(gender, mode)
-    # 기존 코드의 history 대신 save_message_to_dynamo로 변경
-    # history = [{"role": "system", "content": system_prompt}]
+
+    # ✅ WebSocket 연결 직후 과거 메시지 전송
+    previous_history = get_chat_history(pk)
+    for item in previous_history:
+        await websocket.send_json({
+            "type": "history",
+            "role": item["role"],
+            "content": item["content"],
+            "timestamp": item["timestamp"],
+        })
 
     try:
         while True:
             msg = await websocket.receive_text()
-            save_message_to_dynamo(pk, userId,"user", msg, gender)
+            save_message_to_dynamo(pk, userId, "user", msg, gender)
 
             response_parts = []
             if "날씨" in msg and should_trigger_contextual_info(msg, "날씨"):
@@ -111,11 +119,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     reply = await asyncio.to_thread(get_rag_response, msg, pk, system_prompt, memory)
                 elif query_type == "외부정보검색":
                     reply = await asyncio.to_thread(get_external_info, msg, system_prompt, memory)
-
                 else:
                     reply = await get_chatbot_response(pk, msg, system_prompt, memory)
 
-            save_message_to_dynamo(pk, userId,"assistant", reply, gender)
+            save_message_to_dynamo(pk, userId, "assistant", reply, gender)
             memory.chat_memory.add_user_message(msg)
             memory.chat_memory.add_ai_message(reply)
 
@@ -127,3 +134,4 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"[FATAL ERROR] WebSocket 처리 중 예외 발생: {e}")
         await websocket.close()
+
