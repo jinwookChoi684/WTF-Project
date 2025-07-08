@@ -16,12 +16,14 @@ import time
 import boto3
 from boto3.dynamodb.conditions import Key
 from typing import List, Dict
+from dotenv import load_dotenv
 
+load_dotenv()
 dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
 table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages"))
 
 # ✅ 최근 메시지 불러오는 함수 (기본 30개)
-def get_recent_messages(pk: str, limit: int = 30) -> List[Dict[str, str]]:
+def get_recent_messages_from_dynamo(pk: str, limit: int = 10) -> List[Dict[str, str]]:
     try:
         response = table.query(
             KeyConditionExpression=Key("pk").eq(pk),

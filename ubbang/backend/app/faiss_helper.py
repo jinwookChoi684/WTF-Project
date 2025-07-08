@@ -18,6 +18,23 @@ text_splitter = RecursiveCharacterTextSplitter(
     chunk_overlap=30
 )
 
+# ✅ 중복 체크 함수 (유사도 기반)
+# --------------------------------------------
+def is_similar_to_existing(db: FAISS, text: str, threshold=0.3) -> bool:
+    """
+    FAISS가 반환한 유사도 score가 threshold 이하이면 중복으로 판단.
+    FAISS는 L2 distance 기반 → score가 작을수록 유사.
+    """
+    docs_with_scores = db.similarity_search_with_score(text, k=10)
+    for doc, score in docs_with_scores:
+        if score <= threshold:
+            print(f"⚠️ 중복 감지됨 (FAISS 점수 {score:.4f} ≤ {threshold}) → 저장 생략")
+            return True
+    return False
+
+
+
+
 # ✅ 1. FAISS 저장 함수 (pk별로 저장)
 def save_to_faiss(pk: str, messages: List[Dict[str, str]]):
     """
@@ -27,29 +44,36 @@ def save_to_faiss(pk: str, messages: List[Dict[str, str]]):
     texts = []
     metadatas = []
 
+    faiss_path = f"vectorstore/faiss_index/{pk}"
+    os.makedirs(faiss_path, exist_ok=True)
+
+    if os.path.exists(os.path.join(faiss_path, "index.faiss")):
+        db = FAISS.load_local(faiss_path, embedding_model, allow_dangerous_deserialization=True)
+    else:
+        db = None
+
     for msg in messages:
         role_prefix = "[유저]" if msg["role"] == "user" else "[우빵]"
         text = f"{role_prefix} {msg['content']}"
-        # print(f"🧩 원본 텍스트: {text!r}")  # 디버그 로그
         chunks = text_splitter.split_text(text)
-        # print(f"🧩 분할된 조각 개수: {len(chunks)}")  # 디버그 로그
 
         for chunk in chunks:
+            # ✅ 중복 필터링
+            if db and is_similar_to_existing(db, chunk):
+                continue
+
             texts.append(chunk)
             metadatas.append({
                 "pk": pk,
                 "message_id": str(uuid.uuid4()),
                 "role": msg["role"]
             })
+
     if not texts:
-        print(f"⚠️ 저장할 유효 텍스트 없음. FAISS 저장 생략 (pk: {pk})")
+        print(f"⚠️ 중복으로 인해 저장할 텍스트 없음 (pk: {pk})")
         return
 
-    faiss_path = f"vectorstore/faiss_index/{pk}"
-    os.makedirs(faiss_path, exist_ok=True)
-
-    if os.path.exists(os.path.join(faiss_path, "index.faiss")):
-        db = FAISS.load_local(faiss_path, embedding_model, allow_dangerous_deserialization=True)
+    if db:
         db.add_texts(texts, metadatas=metadatas)
     else:
         db = FAISS.from_texts(texts, embedding_model, metadatas=metadatas)
@@ -58,10 +82,11 @@ def save_to_faiss(pk: str, messages: List[Dict[str, str]]):
     print(f"✅ FAISS 저장 완료 ({pk}): {len(texts)}개 조각")
 
 
+
 # ✅ 2. FAISS 유사도 검색 함수
-def search_from_faiss(pk: str, query: str, k: int = 3) -> List[str]:
+def search_from_faiss(pk: str, query: str, k: int = 10) -> List[str]:
     """
-    유저 쿼리에 대해 FAISS에서 유사한 메시지 top-k 검색
+    유저 쿼리에 대해 FAISS에서 유사한 메시지 top-k 검색 + 유사도 점수 출력
     """
     faiss_path = f"vectorstore/faiss_index/{pk}"
     if not os.path.exists(os.path.join(faiss_path, "index.faiss")):
@@ -69,8 +94,17 @@ def search_from_faiss(pk: str, query: str, k: int = 3) -> List[str]:
         return []
 
     db = FAISS.load_local(faiss_path, embedding_model, allow_dangerous_deserialization=True)
-    docs = db.similarity_search(query, k=k)
-    return [doc.page_content for doc in docs]
+
+    # ✅ 유사도 점수 포함하여 검색
+    docs_with_scores = db.similarity_search_with_score(query, k=k)  # ✅ 유사도 포함
+
+    # ✅ 출력 로그 추가
+    print(f"\n🧠 [FAISS 검색 결과: pk={pk}, query='{query}'] → top {len(docs_with_scores)}")
+    for i, (doc, score) in enumerate(docs_with_scores, 1):
+        print(f"{i}. 점수: {score:.4f}, 내용: {doc.page_content[:50]}...")
+
+    return [doc.page_content for doc, _ in docs_with_scores]
+
 
 
 # ✅ 3. FAISS 로드 함수 (옵션)

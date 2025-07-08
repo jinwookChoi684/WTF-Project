@@ -23,6 +23,9 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 
+from .BasePrompt_builder import BasePromptBuilder
+from .dynamo_utils import get_recent_messages_from_dynamo
+
 from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain_core.prompts import ChatPromptTemplate
@@ -44,9 +47,21 @@ user_memory_store = {}
 
 
 def get_user_memory(pk: str) -> ConversationBufferMemory:
-    if pk not in user_memory_store:
-        user_memory_store[pk] = ConversationBufferMemory(return_messages=True)
-    return user_memory_store[pk]
+    if pk in user_memory_store:
+        return user_memory_store[pk]
+
+    memory = ConversationBufferMemory(return_messages=True)
+
+    # 💡 DynamoDB에서 최근 메시지 불러오기
+    recent = get_recent_messages_from_dynamo(pk, limit=10)
+    for msg in recent:
+        if msg["role"] == "user":
+            memory.chat_memory.add_user_message(msg["content"])
+        elif msg["role"] == "assistant":
+            memory.chat_memory.add_ai_message(msg["content"])
+
+    user_memory_store[pk] = memory
+    return memory
 
 
 
@@ -119,47 +134,27 @@ async def get_rag_response(
     age: int,
     tf: str
 ) -> str:
-    # 1. 검색
-    retrieved_chunks = search_from_faiss(pk, user_input, k=3)
+    # 1. FAISS 검색
+    retrieved_chunks = search_from_faiss(pk, user_input, k=10)
     if not retrieved_chunks:
         return "🧠 과거 대화 중 관련된 내용을 찾지 못했어. 다시 한번 말해줄 수 있을까?"
 
-    # 2. context 요약
-    context_summary = "\n".join([f"- {chunk}" for chunk in retrieved_chunks])
+    # 2. context 합치기
+    context_summary = "\n".join([chunk for chunk in retrieved_chunks])
 
-    # 3. 프롬프트 생성
-    prompt_builder = BasePromptBuilder(gender=gender, mode=mode, age=age, personality_TF_type=tf)
-    base_prompt = prompt_builder.build()
+    # 3. 시스템 프롬프트 생성
+    prompt_builder = BasePromptBuilder(gender=gender, mode=mode, age=age, tf=tf)
+    system_prompt = prompt_builder.build()
 
-    system_prompt = f"""{base_prompt}
+    # 4. LangChain 기반 응답 생성 함수 재사용
+    return await get_chatbot_response(
+        pk=pk,
+        user_input=user_input,
+        system_prompt=system_prompt,
+        memory=memory,
+        faiss_context=context_summary
+    )
 
-지금부터는 아래 과거 대화 내용을 참고해서 유저의 현재 질문에 더 풍부하고 자연스럽게 반응해줘:
-
-{context_summary}
-"""
-
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_input}
-    ]
-
-    # 4. 응답 생성
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            temperature=0.7
-        )
-        reply = response.choices[0].message.content.strip()
-
-        memory.chat_memory.add_user_message(user_input)
-        memory.chat_memory.add_ai_message(reply)
-
-        return reply
-
-    except Exception as e:
-        print(f"[RAG 응답 실패] {e}")
-        return "⚠️ 답변 생성 중 오류가 발생했어요. 잠시 후 다시 시도해줘!"
     
 # ✅ 벡터 검색 필요 여부 판단 (vector vs memory)
 def should_use_vector_search(user_input: str) -> bool:

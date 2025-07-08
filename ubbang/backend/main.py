@@ -17,7 +17,7 @@ from app import chat
 from app import diary
 from MySql.user_router import router as user_router
 import asyncio
-from app.idle_checker import start_idle_checker
+# from app.idle_checker import start_idle_checker
 
 
 # from redis_utiles.redis_client import save_chat_message, get_recent_messages, cache_user_info
@@ -248,9 +248,9 @@ async def chat_with_ai(chat: ChatInput):
         )
 
 
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(start_idle_checker())
+# @app.on_event("startup")
+# async def startup_event():
+#     asyncio.create_task(start_idle_checker())
 
 
 # ✅ 감정 히스토리 및 컨텍스트 조회용 API

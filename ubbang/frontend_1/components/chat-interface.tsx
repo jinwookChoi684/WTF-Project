@@ -48,7 +48,8 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
     const userName = activeUser.name ?? "사용자"
     const gender = activeUser.gender ?? "female"
     const mode = activeUser.mode ?? "banmal"
-    const age = activeUser.age ?? 25
+    const age = activeUser.age ?? "25"
+    const tf = activeUser.tf ?? "f"
    // 비회원
    const localUser = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("userInfo") || "{}") : {}
 
@@ -76,7 +77,7 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
       return
     }
 
-    const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=T`
+    const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=${tf}`
     console.log("📡 WebSocket 연결 URL:", wsUrl)
 
     ws.current = new WebSocket(wsUrl)

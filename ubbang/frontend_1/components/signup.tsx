@@ -11,6 +11,7 @@ import { ArrowLeft, User, Mail, Lock, Calendar, MessageCircle, Heart } from "luc
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { Calendar as DatePicker } from "@/components/ui/calendar"
+import { format } from "date-fns";
 
 interface SignupProps {
   onComplete: (userData: {
@@ -131,6 +132,8 @@ const handleSubmit = async () => {
       worry: data.worry,
       birthDate: data.birthDate,
       loginMethod: data.loginMethod,
+      tf: data.tf || "f", // 기본값 설정
+      age: Number(formData.age),
     }
     localStorage.setItem("user", JSON.stringify(localStorageUserData))
 
@@ -340,8 +343,18 @@ const handleSubmit = async () => {
                         toYear={2020}
                         onSelect={(date: Date | undefined) => {
                           if (date) {
-                            handleInputChange("birthDate", date.toISOString().split("T")[0])
+                            const year = date.getFullYear();
+                            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                            const day = date.getDate().toString().padStart(2, '0');
+                            handleInputChange("birthDate", `${year}-${month}-${day}`);
                           }
+                        }}
+                        components={{
+                          CaptionLabel: ({ displayMonth }) => (
+                            <span className="text-sm font-medium">
+                              {format(displayMonth, "LLLL yyyy")}
+                            </span>
+                            ),
                         }}
                       />
                     </PopoverContent>

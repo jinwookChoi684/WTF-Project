@@ -113,21 +113,15 @@ async def websocket_endpoint(websocket: WebSocket):
             if query_type == "외부정보검색":
                 reply = get_external_info(user_msg, mode, memory)
 
-            elif should_use_vector_search(user_msg):
-                reply = await get_rag_response(user_msg, system_prompt, memory, pk)
-            
             else:
-                # ✅ FAISS 벡터 검색 (유사한 과거 기억 보조용)
-                retrieved_context = search_from_faiss(pk, user_msg)
+                retrieved_chunks = search_from_faiss(pk, user_msg) if should_use_vector_search(user_msg) else []
 
-                reply = await get_rag_response(
-                    user_input=user_input,
-                    memory=memory,
+                reply = await get_chatbot_response(
                     pk=pk,
-                    gender=gender,
-                    mode=mode,
-                    age=age,
-                    tf=tf
+                    user_input=user_msg,
+                    system_prompt=system_prompt,
+                    memory=memory,
+                    faiss_context="\n".join(retrieved_chunks) if retrieved_chunks else None
                 )
 
             # ✅ 4. 응답 저장 및 전송 + 활동 시간 갱신

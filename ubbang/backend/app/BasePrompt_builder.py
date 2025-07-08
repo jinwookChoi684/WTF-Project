@@ -17,7 +17,7 @@ class BasePromptBuilder:
             self._build_mode(),
             self._build_gender(),
             self._build_age(),
-            self._build_personality_TF_type()
+            self._build_TF()
         ])
 
 
@@ -79,7 +79,7 @@ class BasePromptBuilder:
 
 
     # --- 4.T/F 문제해결접근 말투 -------------------------------------------------------
-    def _build_personality_TF_type(self) -> str:
+    def _build_TF(self) -> str:
         if self.tf == "T":
             return textwrap.dedent("""\
             사용자는 감정보다 논리적 사고와 문제 해결을 중시하는 성향입니다.
