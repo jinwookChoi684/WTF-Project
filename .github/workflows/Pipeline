@@ -1,0 +1,49 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - minkyu_test
+# backend/frontend 도커 이미지 빌드 후 저장하는경로
+env:
+  ECR_REGISTRY: 502319971387.dkr.ecr.ap-northeast-2.amazonaws.com
+  BACKEND_IMAGE: bread
+  FRONTEND_IMAGE: frontend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # [1] 백엔드 도커 빌드/푸시
+      - name: Build and push backend Docker image
+        run: |
+          docker build -t ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} ./ubbang/backend
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+      # [2] 프론트엔드 도커 빌드/푸시
+      - name: Build and push frontend Docker image
+        run: |
+          docker build -t ${{ env.ECR_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} ./ubbang/frontend
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+
+      # [3] EKS에 배포
+      - name: Deploy backend to EKS
+        run: |
+          aws eks update-kubeconfig --region ap-northeast-2 --name serious-lofi-dolphin
+          kubectl set image deployment/backend backend=${{ env.ECR_REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+      - name: Deploy frontend to EKS
+        run: |
+          kubectl set image deployment/frontend frontend=${{ env.ECR_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
