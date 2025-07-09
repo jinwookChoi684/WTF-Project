@@ -2,8 +2,8 @@
 import os
 from openai import OpenAI
 from typing import Optional
-from app.weather import get_weather_data
-from app.utils import get_today_datetime_info, extract_city_from_message
+from .weather import get_weather_data
+from .utils import get_today_datetime_info, extract_city_from_message
 from langchain.memory import ConversationBufferMemory
 
 

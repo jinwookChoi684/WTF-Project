@@ -40,6 +40,7 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     worry: "",
     birthDate: "",
     mode:"",
+    tf:"",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -73,6 +74,7 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     if (!formData.age) newErrors.age = "나이를 선택해주세요"
     if (!formData.mode) newErrors.mode = "말투를 선택해주세요"
     if (!formData.gender) newErrors.gender = "성별을 선택해주세요"
+    if (!formData.tf) newErrors.tf = "이성적(T) 공감적(F) 대화스타일을 선택해주세요"
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -108,6 +110,7 @@ const handleSubmit = async () => {
       mode: formData.mode,
       worry: formData.currentConcern || null,
       age: Number(formData.age),
+      tf:formData.tf
       }),
     })
     console.log("✅ BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL)
@@ -132,7 +135,7 @@ const handleSubmit = async () => {
       worry: data.worry,
       birthDate: data.birthDate,
       loginMethod: data.loginMethod,
-      tf: data.tf || "f", // 기본값 설정
+      tf: data.tf,  // 기본값 설정
       age: Number(formData.age),
     }
     localStorage.setItem("user", JSON.stringify(localStorageUserData))
@@ -146,6 +149,7 @@ const handleSubmit = async () => {
           userId: formData.userId,
           gender: formData.gender,
           mode: formData.mode,
+          tf:formData.tf,
           worry: formData.currentConcern || "",
           birthDate: formData.birthDate,
         }
@@ -419,6 +423,31 @@ const handleSubmit = async () => {
                   </Select>
                   {errors.mode && <p className="text-xs text-red-600">{errors.mode}</p>}
                 </div>
+
+                {/* T/F 성향 선택 */}
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 flex items-center">
+                    성향 (감성/이성)
+                  </label>
+                  <Select
+                    value={formData.tf}
+                    onValueChange={(value) => handleInputChange("tf", value)}
+                  >
+                    <SelectTrigger
+                      className={`h-12 border-gray-200 focus:border-amber-300 focus:ring-amber-200 rounded-xl ${
+                        errors.tf ? "border-red-300" : ""
+                      }`}
+                    >
+                      <SelectValue placeholder="대화스타일을 선택해주세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="f">감성형 (Feeling)</SelectItem>
+                      <SelectItem value="t">이성형 (Thinking)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.tf && <p className="text-xs text-red-600">{errors.tf}</p>}
+                </div>
+
 
                 {/* Current Concern */}
                 <div className="space-y-1">

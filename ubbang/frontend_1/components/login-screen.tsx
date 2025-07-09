@@ -17,7 +17,10 @@ interface LoginScreenProps {
       loginMethod: string;
       gender: string;
       age: number;
-      mode: string}) => void
+      mode: string;
+      tf:string
+      }) => void
+
   onNavigate: (screen: string) => void
 }
 
@@ -70,6 +73,7 @@ const handleEmailLogin = async () => {
       mode: data.mode,
       worry: data.worry,
       birthDate: data.birthDate,
+      tf:data.tf,
       loginMethod: "이메일 계정",
     }
 

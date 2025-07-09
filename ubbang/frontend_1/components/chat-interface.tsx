@@ -25,6 +25,7 @@ interface ChatInterfaceProps {
     mode: string
     worry: string
     birthDate: string
+    tf:string
   }
 }
 
@@ -42,16 +43,18 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   // ✅ user fallback 처리
-    const activeUser = user ?? initialUserInfo ?? {}
-    const pk = activeUser.pk ?? 0
-    const userId = activeUser.userId ?? "anonymous"
-    const userName = activeUser.name ?? "사용자"
-    const gender = activeUser.gender ?? "female"
-    const mode = activeUser.mode ?? "banmal"
-    const age = activeUser.age ?? "25"
-    const tf = activeUser.tf ?? "f"
+   const activeUser = user ?? initialUserInfo ?? {}
+   const pk = activeUser.pk ?? 0
+   const userId = activeUser.userId ?? "anonymous"
+   const userName = activeUser.name ?? "사용자"
+   const gender = activeUser.gender ?? "female"
+   const mode = activeUser.mode ?? "banmal"
+   const age = activeUser.age ?? "25"
+   const tf = activeUser.tf ?? "f"
    // 비회원
    const localUser = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("userInfo") || "{}") : {}
+
+
 
   useEffect(() => {
     setMessages([
@@ -130,6 +133,7 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
       sender: "user",
       timestamp: new Date(),
     }
+    setIsTyping(true)
     ws.current?.send(inputMessage)
     setMessages((prev) => [...prev, userMessage])
     setInputMessage("")

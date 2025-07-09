@@ -3,8 +3,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from MySql.database import get_db
-from MySql.models import User
+from .database import get_db
+from .models import User
 
 router = APIRouter()
 
@@ -14,6 +14,7 @@ class UserUpdateRequest(BaseModel):
     gender: str
     mode: str
     worry: str
+    tf:str
 
 @router.patch("/update-user")
 def update_user(data: UserUpdateRequest, db: Session = Depends(get_db)):
@@ -25,6 +26,7 @@ def update_user(data: UserUpdateRequest, db: Session = Depends(get_db)):
     user.name = data.name
     user.gender = data.gender
     user.mode = data.mode
+    user.tf=data.tf
     user.worry = data.worry
 
     db.commit()
@@ -39,5 +41,6 @@ def update_user(data: UserUpdateRequest, db: Session = Depends(get_db)):
         "worry": user.worry,
         "birthDate": user.birthDate.strftime("%Y-%m-%d") if user.birthDate else None,
         "loginMethod": user.loginMethod if hasattr(user, "loginMethod") else None,
-        "age": user.age
+        "age": user.age,
+        "tf":user.tf
     }

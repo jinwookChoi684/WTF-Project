@@ -17,6 +17,7 @@ interface UserData {
   worry: string
   birthDate: string
   loginMethod: string
+  tf:string
 }
 
 export default function ProfileSettings({ onLogout }: { onLogout: () => void }) {
@@ -46,6 +47,7 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
         gender: editData.gender ?? "etc",
         mode: editData.mode ?? "banmal",
         worry: editData.worry ?? "",        // 핵심: null → 빈 문자열
+        tf: editData.tf ?? "f",
       }
 
       console.log("보내는 payload:", payload)
@@ -169,6 +171,24 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
                   {user.mode === "banmal" ? "반말" : "존댓말"}
                 </div>
 
+              )}
+            </div>
+
+            {/* tf (감성/이성) */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">성향</label>
+              {isEditing ? (
+                <Select value={editData.tf} onValueChange={val => setEditData({ ...editData, tf: val })}>
+                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="f">감성형</SelectItem>
+                    <SelectItem value="t">이성형</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-800">
+                  {user.tf === "f" ? "감성형" : "이성형"}
+                </div>
               )}
             </div>
 

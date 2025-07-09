@@ -37,9 +37,10 @@ def generate_image(emotion: str) -> str:
 
 #---------------- 날짜 유틸 ----------------------------------------------------------------
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 def get_today_datetime_info():
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
     date_str = now.strftime("%Y년 %m월 %d일")
     weekday_map = {
         "Monday": "월요일",

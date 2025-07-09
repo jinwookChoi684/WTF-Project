@@ -4,7 +4,7 @@ from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from langchain.schema import Document
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -20,7 +20,7 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 # ✅ 중복 체크 함수 (유사도 기반)
 # --------------------------------------------
-def is_similar_to_existing(db: FAISS, text: str, threshold=0.3) -> bool:
+def is_similar_to_existing(db: FAISS, text: str, threshold=0.1) -> bool:
     """
     FAISS가 반환한 유사도 score가 threshold 이하이면 중복으로 판단.
     FAISS는 L2 distance 기반 → score가 작을수록 유사.

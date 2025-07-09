@@ -22,6 +22,8 @@ from .naver_helper import get_external_info
 from .faiss_helper import save_to_faiss, search_from_faiss
 from datetime import datetime
 
+from .dynamo_utils import get_recent_messages_from_dynamo
+
 # -------------------------------------------------------------------------------
 
 load_dotenv()
