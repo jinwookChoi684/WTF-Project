@@ -59,7 +59,7 @@ export default function AnonymousOnboarding({ onComplete, onBack }: AnonymousOnb
     const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
     try {
-      const response = await fetch(`${apiUrl}/users`, {
+      const response = await fetch(`${apiUrl}/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -68,7 +68,10 @@ export default function AnonymousOnboarding({ onComplete, onBack }: AnonymousOnb
       })
 
       const res = await response.json()
-      const pk = res.pk ?? userId // fallback
+     if (!res.pk) {
+          throw new Error("서버 응답에 pk가 없습니다.")
+        }
+        const pk = res.pk
 
       const minimalUserInfo = {
         pk,

@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect} from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Sparkles, ImageIcon, BookOpen } from "lucide-react"
+import { useRouter } from "next/navigation"
+
 
 interface DiaryEntryType {
   id: string
@@ -13,6 +15,7 @@ interface DiaryEntryType {
   emotion: "happy" | "sad" | "neutral" | "excited" | "anxious"
   imageUrl: string
   summary: string
+  pk: number
 }
 
 interface DiaryCreationProps {
@@ -21,6 +24,7 @@ interface DiaryCreationProps {
 }
 
 export default function DiaryCreation({ onComplete, onCancel }: DiaryCreationProps) {
+    const router = useRouter()
   const [step, setStep] = useState<"analyzing" | "generating" | "complete">("analyzing")
   const [generatedEntry, setGeneratedEntry] = useState<DiaryEntryType | null>(null)
 
@@ -28,10 +32,13 @@ export default function DiaryCreation({ onComplete, onCancel }: DiaryCreationPro
     setStep("analyzing")
 
     try {
-      const userId = localStorage.getItem("user_id")
-      if (!userId) throw new Error("user_id 없음")
+    const parsed = JSON.parse(localStorage.getItem("user") || "{}")
+    const pk = Number(parsed.pk)
 
-      const res = await fetch(`http://localhost:8000/diary?user_id=${userId}`)
+    if (!pk) throw new Error("pk 없음")
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/diary?pk=${pk}`)
+
       const data = await res.json()
 
       const newEntry: DiaryEntryType = {
@@ -42,6 +49,7 @@ export default function DiaryCreation({ onComplete, onCancel }: DiaryCreationPro
         emotion: data.emotion,
         imageUrl: data.image_url,
         summary: data.summary,
+        pk
       }
 
       setGeneratedEntry(newEntry)
@@ -59,9 +67,9 @@ export default function DiaryCreation({ onComplete, onCancel }: DiaryCreationPro
   }
 
   // 컴포넌트 로드 시 자동 분석 시작
-  useState(() => {
+useEffect(() => {
     handleAnalyze()
-  })
+  },[])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 p-4">

@@ -12,7 +12,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarIcon } from "lucide-react"
 import { Calendar as DatePicker } from "@/components/ui/calendar"
 
-export default function Signup() {
+interface SignupProps {
+  onComplete: (userInfo: { pk: string }) => void
+  onBack: () => void
+}
+
+export default function Signup({ onComplete, onBack }: SignupProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
@@ -93,7 +98,7 @@ export default function Signup() {
       if (response.ok) {
         const data = await response.json()
 
-        const localStorageUserData = {
+        const userInfo = {
           pk: data.pk,
           userId: data.userId,
           name: data.name,
@@ -102,14 +107,12 @@ export default function Signup() {
           worry: data.worry,
           birthDate: data.birthDate,
           loginMethod: "이메일 계정",
+          age: Number(data.age),
         }
 
-        localStorage.setItem("user", JSON.stringify(localStorageUserData))
+        localStorage.setItem("user", JSON.stringify(userInfo))
         setStep("complete")
-
-        setTimeout(() => {
-          router.push("/chat")
-        }, 1500)
+        onComplete(userInfo)
       } else {
         const text = await response.text()
         console.error("❌ 회원가입 실패:", text)
@@ -134,6 +137,7 @@ export default function Signup() {
     }
     return options
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">

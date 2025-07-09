@@ -51,6 +51,7 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
       console.log("보내는 payload:", payload)
 
       try {
+
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/update-user`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

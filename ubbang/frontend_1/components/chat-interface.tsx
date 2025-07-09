@@ -8,6 +8,8 @@ import { Send, Clock } from "lucide-react"
 import MessageBubble from "@/components/message-bubble"
 import SessionSummary from "@/components/session-summary"
 
+import { useRouter } from "next/navigation"
+
 interface Message {
   id: string
   content: string
@@ -17,7 +19,7 @@ interface Message {
 
 interface ChatInterfaceProps {
   initialUserInfo: {
-    pk: Number
+    pk: number
     name: string
     userId: string
     loginMethod: string
@@ -25,20 +27,24 @@ interface ChatInterfaceProps {
     mode: string
     worry: string
     birthDate: string
+    age: number
   }
 }
 
-export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
+export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {const router = useRouter()
   const { user } = useUser()
-
   const ws = useRef<WebSocket | null>(null)
+
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [isUserTyping, setIsUserTyping] = useState(false)
+  const [currentScreen, setCurrentScreen] = useState("chat")
+
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const hasConnectedOnce = useRef(false)
 
   const activeUser = user ?? initialUserInfo ?? {}
   const pk = activeUser.pk ?? 0
@@ -46,101 +52,74 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   const userName = activeUser.name ?? "사용자"
   const gender = activeUser.gender ?? "female"
   const mode = activeUser.mode ?? "banmal"
+  const age = Number(activeUser.age) || 25
 
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: "1",
-          content: `안녕하세요 ${userName}님! 저는 우빵이입니다. 오늘 하루는 어떠셨나요? 편안하게 이야기해 주세요.`,
-          sender: "ai",
-          timestamp: new Date(),
-        },
-      ])
-    }
+    setMessages([
+      {
+        id: "1",
+        content: `안녕하세요 ${userName}님! 저는 우빵이입니다. 오늘 하루는 어떠셨나요? 편안하게 이야기해 주세요.`,
+        sender: "ai",
+        timestamp: new Date(),
+      },
+    ])
   }, [userName])
 
   useEffect(() => {
-    if (!pk) {
-      console.log("🚫 WebSocket 연결 생략: 유효하지 않은 pk", pk)
-      return
-    }
+    if (!pk || hasConnectedOnce.current) return
 
-    if (ws.current) {
-      console.log("ℹ️ 이미 WebSocket 연결되어 있음. 중복 연결 생략")
-      return
-    }
+    const timeout = setTimeout(() => {
+      hasConnectedOnce.current = true
+      const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=T`
+      console.log("📡 WebSocket 연결 URL:", wsUrl)
 
-    const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}`
-    console.log("📡 WebSocket 연결 URL:", wsUrl)
+      if (ws.current) {
+        ws.current.close()
+        ws.current = null
+      }
 
-    ws.current = new WebSocket(wsUrl)
+      const socket = new WebSocket(wsUrl)
+      ws.current = socket
 
-    ws.current.onmessage = (event) => {
-      try {
-        const isProbablyJson = event.data.startsWith("{") || event.data.startsWith("[")
+      socket.onopen = () => {
+        console.log("✅ WebSocket 연결됨")
+      }
 
-        if (isProbablyJson) {
-          const data = JSON.parse(event.data)
-
-          if (data.type === "history") {
-            const historyMessage: Message = {
-              id: data.timestamp.toString(),
-              content: data.content,
-              sender: data.role === "user" ? "user" : "ai",
-              timestamp: new Date(data.timestamp * 1000),
-            }
-
-            setMessages((prev) => {
-              const exists = prev.some((m) => m.id === historyMessage.id)
-              return exists ? prev : [...prev, historyMessage]
-            })
-          } else {
-            const aiMessage: Message = {
-              id: Date.now().toString(),
-              content: typeof data === "string" ? data : data.content,
-              sender: "ai",
-              timestamp: new Date(),
-            }
-            setMessages((prev) => [...prev, aiMessage])
-          }
-        } else {
-          const aiMessage: Message = {
-            id: Date.now().toString(),
-            content: event.data,
-            sender: "ai",
-            timestamp: new Date(),
-          }
-          setMessages((prev) => [...prev, aiMessage])
-        }
-
-        setIsTyping(false)
-      } catch (err) {
-        console.warn("❗️JSON 파싱 실패, fallback 처리:", err)
-        const fallbackMessage: Message = {
+      socket.onmessage = (event) => {
+        const aiMessage: Message = {
           id: Date.now().toString(),
           content: event.data,
           sender: "ai",
           timestamp: new Date(),
         }
-        setMessages((prev) => [...prev, fallbackMessage])
+        setMessages((prev) => [...prev, aiMessage])
         setIsTyping(false)
       }
-    }
 
-    ws.current.onopen = () => console.log("✅ WebSocket 연결됨")
-    ws.current.onerror = () => console.log("❌ WebSocket 오류 발생")
-    ws.current.onclose = () => {
-      console.log("🔌 WebSocket 종료됨")
-      ws.current = null
-    }
+      socket.onerror = () => {
+        console.log("❌ WebSocket 오류 발생")
+        socket.close()
+        ws.current = null
+
+        setTimeout(() => {
+          console.log("🔁 WebSocket 재연결 시도 중...")
+          hasConnectedOnce.current = false
+        }, 1000)
+      }
+
+      socket.onclose = () => {
+        console.log("🔌 WebSocket 종료됨")
+        ws.current = null
+      }
+    }, 300)
 
     return () => {
+      clearTimeout(timeout)
       console.log("🧹 WebSocket cleanup")
       ws.current?.close()
       ws.current = null
     }
-  }, [pk, mode, gender])
+  }, [pk, mode, gender, age])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -169,7 +148,9 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
     ws.current?.send(inputMessage)
     setMessages((prev) => [...prev, userMessage])
     setInputMessage("")
-    setTimeout(() => inputRef.current?.focus(), 50)
+    setTimeout(() => {
+      inputRef.current?.focus()
+    }, 50)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -182,25 +163,49 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center space-x-3">
-            <img
-              src="/images/bread2.png"
-              alt="서포터 프로필"
-              className="w-10 h-10 rounded-full border-2 border-amber-200 shadow-sm"
-            />
-            <div>
-              <h1 className="text-lg font-semibold text-gray-800">우빵이</h1>
-              <p className="text-sm text-gray-500">WhaT's your Feeling</p>
+        <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center space-x-3">
+              <img
+                src="/images/bread2.png"
+                alt="서포터 프로필"
+                className="w-10 h-10 rounded-full border-2 border-amber-200 shadow-sm"
+              />
+              <div>
+                <h1 className="text-lg font-semibold text-gray-800">우빵이</h1>
+                <p className="text-sm text-gray-500">WhaT's your Feeling</p>
+              </div>
             </div>
+
+          <div className="flex justify-center gap-2 px-4 pb-3">
+            <Button
+              size="sm"
+              className="bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200"
+            > 오늘도 고생했어
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => router.push(`/${pk}/chat/emotion-diary`)}
+              className="bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-200"
+            >
+              너를 추억해
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => router.push(`/${pk}/chat/character-collection`)}
+              className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-200"
+            > 나 보러와
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => router.push(`/${pk}/chat/profile`)}
+              className="bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200"
+            >
+              이게 너야
+            </Button>
+           </div>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <Clock className="w-4 h-4" />
-            <span>온라인</span>
           </div>
-        </div>
-      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">

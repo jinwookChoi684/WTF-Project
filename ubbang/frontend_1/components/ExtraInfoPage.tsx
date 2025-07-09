@@ -35,7 +35,7 @@ export default function ExtraInfoPage() {
 
         if (user.gender && user.birthDate && user.mode && user.age) {
           localStorage.setItem("user", JSON.stringify(user))
-          router.push("/chat")
+          router.push(`/${pkValue}/chat`)
         } else {
           setLoading(false)
         }

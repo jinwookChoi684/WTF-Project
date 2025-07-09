@@ -31,3 +31,4 @@ class UserLoginResponse(BaseModel):
     worry: Optional[str] = None
     birthDate: Optional[str] = None
     loginMethod: str
+    age: Optional[int] = None

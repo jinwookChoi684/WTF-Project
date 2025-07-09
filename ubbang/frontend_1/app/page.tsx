@@ -106,10 +106,10 @@
 //   )
 // }
 
-
 "use client"
+
 import LoginScreen from "@/components/login-screen"
 
 export default function HomePage() {
-  return <LoginScreen />
+  return <LoginScreen /> // 항상 로그인 화면
 }

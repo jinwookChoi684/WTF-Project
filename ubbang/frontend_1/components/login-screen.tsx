@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Heart, Mail, Lock } from "lucide-react"
-import { FcGoogle } from "react-icons/fc"
+import { Heart, Mail, Lock, MessageCircle } from "lucide-react"
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -33,6 +32,7 @@ export default function LoginScreen() {
     setErrors({})
 
     try {
+     localStorage.removeItem("user")
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,8 +46,8 @@ export default function LoginScreen() {
       }
 
       const data = await response.json()
-
-      const userData = {
+        console.log("🔥 data.age 값:", data.age)
+       const userData = {
         pk: data.pk,
         name: data.name,
         userId: data.userId,
@@ -56,12 +56,10 @@ export default function LoginScreen() {
         worry: data.worry,
         birthDate: data.birthDate,
         loginMethod: "이메일 계정",
+        age: data.age,
       }
-
       localStorage.setItem("user", JSON.stringify(userData))
-
-      // ✅ /chat으로 이동
-      router.push("/chat")
+      router.push(`/${userData.pk}/chat`)
     } catch (err) {
       console.error("❌ 로그인 실패:", err)
       alert("서버 오류가 발생했습니다.")
@@ -69,8 +67,9 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-100 via-orange-50 to-white flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
+        {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="w-16 h-16 bg-gradient-to-br from-amber-200 to-orange-200 rounded-full flex items-center justify-center shadow-lg">
@@ -83,6 +82,7 @@ export default function LoginScreen() {
           </div>
         </div>
 
+        {/* Card */}
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl text-gray-800">로그인</CardTitle>
@@ -97,23 +97,24 @@ export default function LoginScreen() {
                   type="text"
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
-                  autoComplete="off"
                   placeholder="아이디"
-                  className={`pl-10 h-12 border-gray-200 focus:border-amber-300 focus:ring-amber-200 rounded-xl ${
+                  autoComplete="off"
+                  className={`pl-10 h-12 rounded-xl border-gray-200 focus:border-amber-300 focus:ring-amber-200 ${
                     errors.userId ? "border-red-300" : ""
                   }`}
                 />
                 {errors.userId && <p className="text-xs text-red-600 mt-1">{errors.userId}</p>}
               </div>
+
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
                   placeholder="비밀번호"
-                  className={`pl-10 h-12 border-gray-200 focus:border-amber-300 focus:ring-amber-200 rounded-xl ${
+                  autoComplete="new-password"
+                  className={`pl-10 h-12 rounded-xl border-gray-200 focus:border-amber-300 focus:ring-amber-200 ${
                     errors.password ? "border-red-300" : ""
                   }`}
                 />
@@ -121,6 +122,7 @@ export default function LoginScreen() {
               </div>
             </div>
 
+            {/* 이메일 로그인 버튼 */}
             <Button
               onClick={handleEmailLogin}
               className="w-full h-12 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white rounded-xl shadow-lg transition-all duration-200"
@@ -128,6 +130,7 @@ export default function LoginScreen() {
               로그인
             </Button>
 
+            {/* 구분선 */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200" />
@@ -137,23 +140,24 @@ export default function LoginScreen() {
               </div>
             </div>
 
+            {/* SNS 로그인 버튼 */}
             <Button
-              onClick={() => {
-                window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google/login`
-              }}
-              className="w-full h-12 bg-white hover:bg-gray-100 text-gray-800 rounded-xl shadow-md border border-gray-300 transition-all duration-200"
+              onClick={() => (window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google/login`)}
+              className="w-full h-12 bg-blue-400 hover:bg-blue-500 text-white rounded-xl shadow-lg transition-all duration-200"
             >
-              <FcGoogle className="w-5 h-5 mr-2" />
-              Google로 로그인
+              <MessageCircle className="w-5 h-5 mr-2" />
+              구글로 로그인
             </Button>
 
             <Button
               onClick={() => router.push("/sns-auth")}
               className="w-full h-12 bg-green-400 hover:bg-green-500 text-green-900 rounded-xl shadow-lg transition-all duration-200"
             >
+              <MessageCircle className="w-5 h-5 mr-2" />
               네이버로 로그인
             </Button>
 
+            {/* 익명 로그인 */}
             <Button
               onClick={() => router.push("/anonymous")}
               variant="outline"
@@ -162,6 +166,7 @@ export default function LoginScreen() {
               비회원으로 시작하기
             </Button>
 
+            {/* 회원가입 */}
             <div className="text-center pt-2">
               <button
                 onClick={() => router.push("/signup")}
