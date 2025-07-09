@@ -1,0 +1,48 @@
+# 🔐 환경 변수 파일
+.env
+
+# 🐍 Python 캐시/컴파일
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# 📦 Python 가상환경
+venv/
+ENV/
+env/
+.venv/
+
+# 🧠 Jupyter 노트북 체크포인트 (혹시 쓰면)
+.ipynb_checkpoints/
+
+# 🧰 PyCharm 프로젝트 설정
+.idea/
+
+# ⚙️ VSCode 설정 (혹시 VSCode 열면)
+.vscode/
+
+# 🌐 Node.js 의존성
+node_modules/
+package-lock.json
+
+# 🛠️ Next.js 빌드
+.next/
+out/
+
+# 📁 압축 파일
+*.zip
+
+# 💥 로그 파일
+*.log
+
+# 🔄 OS 임시파일
+.DS_Store
+Thumbs.db
+
+# 🧪 테스트 결과
+coverage/
+htmlcov/
+
+# 🧪 테스트 모듈
+pytest_cache/
