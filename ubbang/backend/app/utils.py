@@ -8,7 +8,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def analyze_emotion(text: str) -> str:
     res = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": "다음 텍스트의 감정을 분석해서 happy, sad, neutral, excited, anxious 중 하나로 반환하세요."},
             {"role": "user", "content": text}
@@ -19,7 +19,7 @@ def analyze_emotion(text: str) -> str:
 
 def summarize_text(text: str) -> str:
     res = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": "다음 대화 내용을 1~2문장으로 요약하세요."},
             {"role": "user", "content": text}
@@ -70,4 +70,3 @@ def extract_city_from_message(msg: str) -> str:
         if city in msg:
             return city
     return "서울"
-

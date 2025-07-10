@@ -55,6 +55,7 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   const age = Number(activeUser.age) || 25
 
   useEffect(() => {
+    if (messages.length === 0)
     setMessages([
       {
         id: "1",
@@ -159,6 +160,42 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
       handleSendMessage()
     }
   }
+
+  useEffect(() => {
+      setMessages([
+        {
+          id: "1",
+          content: `안녕하세요 ${userName}님! 저는 우빵이입니다. 오늘 하루는 어떠셨나요? 편안하게 이야기해 주세요.`,
+          sender: "ai",
+          timestamp: new Date(),
+        },
+      ])
+    }, [userName])
+
+    useEffect(() => {
+      const loadChatHistory = async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/chat/history?pk=${pk}`)
+          const data = await res.json()
+
+          const restoredMessages: Message[] = data.map((item: any) => ({
+            id: item.id,
+            content: item.content,
+            sender: item.sender,
+            timestamp: new Date(item.timestamp),
+          }))
+
+          setMessages(restoredMessages)
+        } catch (err) {
+          console.error("❌ 대화 기록 불러오기 실패:", err)
+        }
+      }
+
+      if (pk) {
+        loadChatHistory()
+      }
+    }, [pk])
+
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">

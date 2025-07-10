@@ -3,7 +3,7 @@ import os, uuid, time, asyncio
 from dotenv import load_dotenv
 import boto3
 from boto3.dynamodb.conditions import Key
-
+from fastapi import APIRouter, HTTPException
 from .BasePrompt_builder import BasePromptBuilder
 
 from .openai_helper import (
@@ -28,28 +28,29 @@ router = APIRouter()
 dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
 table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages"))
 
+
 # -------------------------------------------------------------------------------
 
 # 유저 활동 시간 업데이트 함수 (4시간 무응답 감지용)
-# def update_last_active_time(pk: str):
-#     try:
-#         table.update_item(
-#             Key={"pk": pk, "timestamp": 0},  # 유휴 추적용 dummy row
-#             UpdateExpression="SET last_active_time = :t",
-#             ExpressionAttributeValues={":t": int(time.time())}
-#         )
-#     except Exception as e:
-#         print(f"[ERROR] last_active_time 업데이트 실패: {e}")
+def update_last_active_time(pk: str):
+    try:
+        table.update_item(
+            Key={"pk": pk, "timestamp": 0},  # 유휴 추적용 dummy row
+            UpdateExpression="SET last_active_time = :t",
+            ExpressionAttributeValues={":t": int(time.time())}
+        )
+    except Exception as e:
+        print(f"[ERROR] last_active_time 업데이트 실패: {e}")
 
 
 # 메시지 저장
-def save_message_to_dynamo(pk: str, userId: str,  role: str, content: str, gender: str, tf: str):
+def save_message_to_dynamo(pk: str, userId: str, role: str, content: str, gender: str, tf: str):
     try:
         table.put_item(
             Item={
-                "pk": str(pk),                  # 파티션 키
+                "pk": str(pk),  # 파티션 키
                 "timestamp": int(time.time()),  # 정렬 키
-                "userId": str(userId),          # 참고용
+                "userId": str(userId),  # 참고용
                 "gender": gender,
                 "tf": str(tf),
                 "role": role,
@@ -71,12 +72,7 @@ async def websocket_endpoint(websocket: WebSocket):
     userId = websocket.query_params.get("userId", f"guest-{str(uuid.uuid4())}")
     gender = websocket.query_params.get("gender", "female")
     mode = websocket.query_params.get("mode", "banmal")
-    #age = int(websocket.query_params.get("age", "25"))
-    age_param = websocket.query_params.get("age", "25")
-    try:
-        age = int(age_param)
-    except (ValueError, TypeError):
-        age = 25  # fallback 기본값 설정
+    age = int(websocket.query_params.get("age", "25"))
     tf = websocket.query_params.get("tf", "F")  # T or F
 
     print(f"📥 WebSocket 요청 들어옴: pk={pk}, user_id={userId}, mode={mode}, gender={gender}, age={age}, tf={tf}")
@@ -98,10 +94,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # ✅ 1. 메시지 저장 (user) + 활동 시간 갱신
             save_message_to_dynamo(pk, userId, "user", user_msg, gender, tf)
-            # update_last_active_time(pk)
+            update_last_active_time(pk)
 
             # ✅ 2. 날씨/시간 판단 → 자동응답
-            contextual_reply = await get_contextual_info_reply(user_input=user_msg, system_prompt=system_prompt,memory=memory)
+            contextual_reply = await get_contextual_info_reply(user_input=user_msg, system_prompt=system_prompt,
+                                                               memory=memory)
             if contextual_reply:
                 save_message_to_dynamo(pk, userId, "assistant", contextual_reply, gender, tf)
                 memory.chat_memory.add_user_message(user_msg)
@@ -116,16 +113,20 @@ async def websocket_endpoint(websocket: WebSocket):
             if query_type == "외부정보검색":
                 reply = get_external_info(user_msg, mode, memory)
 
-            elif query_type == "개인기록검색" or should_use_vector_search(user_msg):
-                reply = await get_rag_response(user_msg, memory, pk, gender, mode, age, tf)
-
             else:
-                reply = await get_chatbot_response(user_input=user_msg, system_prompt=system_prompt, memory=memory, pk=pk)
+                retrieved_chunks = search_from_faiss(pk, user_msg) if should_use_vector_search(user_msg) else []
+
+                reply = await get_chatbot_response(
+                    pk=pk,
+                    user_input=user_msg,
+                    system_prompt=system_prompt,
+                    memory=memory,
+                    faiss_context="\n".join(retrieved_chunks) if retrieved_chunks else None
+                )
 
             # ✅ 4. 응답 저장 및 전송 + 활동 시간 갱신
-
             save_message_to_dynamo(pk, userId, "assistant", reply, gender, tf)
-            # update_last_active_time(pk)
+            update_last_active_time(pk)
             memory.chat_memory.add_user_message(user_msg)
             memory.chat_memory.add_ai_message(reply)
             await websocket.send_text(reply)
@@ -140,12 +141,35 @@ async def websocket_endpoint(websocket: WebSocket):
                 embedding_counter = 0
                 buffered_messages = []
 
+
     except WebSocketDisconnect:
         print("❌ WebSocket 연결 끊김")
     except Exception as e:
         print(f"❌ 예외 발생: {e}")
         await websocket.send_text("⚠️ 오류가 발생했어요. 잠시 후 다시 시도해주세요.")
-    # finally:
-    #     if buffered_messages and embedding_counter > 0:
-    #         print("📦 WebSocket 종료 시점 FAISS 저장 실행")
-    #         save_to_faiss(pk, buffered_messages)
+    finally:
+        if buffered_messages:
+            print("📦 WebSocket 종료 시점 FAISS 저장 실행")
+            save_to_faiss(pk, buffered_messages)
+
+# 과거 대화내용 프론트에 띄우기
+chat_router = APIRouter()
+@router.get("/chat/history")
+def get_chat_history(pk: str):
+    try:
+        response = table.query(
+            KeyConditionExpression=Key("pk").eq(pk),
+            ScanIndexForward=True  # 오래된 순 정렬
+        )
+        items = response.get("Items", [])
+        return [
+            {
+                "id": item.get("message_id", f"{item['pk']}_{item['timestamp']}"),
+                "content": item["content"],
+                "sender": "ai" if item["role"] == "assistant" else "user",
+                "timestamp": datetime.fromtimestamp(item["timestamp"]).isoformat()
+            }
+            for item in items if item["timestamp"] != 0
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DynamoDB 조회 실패: {str(e)}")
