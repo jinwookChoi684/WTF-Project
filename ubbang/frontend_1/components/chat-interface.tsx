@@ -28,6 +28,7 @@ interface ChatInterfaceProps {
     worry: string
     birthDate: string
     age: number
+    tf:string
   }
 }
 
@@ -53,6 +54,7 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   const gender = activeUser.gender ?? "female"
   const mode = activeUser.mode ?? "banmal"
   const age = Number(activeUser.age) || 25
+  const tf = activeUser.tf ?? "f"
 
   useEffect(() => {
     if (messages.length === 0)
@@ -71,7 +73,7 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
 
     const timeout = setTimeout(() => {
       hasConnectedOnce.current = true
-      const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=T`
+      const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=${tf}`
       console.log("📡 WebSocket 연결 URL:", wsUrl)
 
       if (ws.current) {

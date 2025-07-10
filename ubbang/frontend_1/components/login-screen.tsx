@@ -7,6 +7,24 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Heart, Mail, Lock, MessageCircle } from "lucide-react"
 
+console.log("💡 LoginScreen 렌더링 확인!")
+
+interface LoginScreenProps {
+  onLogin: (userData: {
+      name: string;
+      nickname: string;
+      userId: string;
+      loginMethod: string;
+      gender: string;
+      age: number;
+      mode: string;
+      tf:string
+      }) => void
+
+  onNavigate: (screen: string) => void
+}
+
+
 export default function LoginScreen() {
   const router = useRouter()
   const [userId, setUserId] = useState("")
@@ -57,6 +75,7 @@ export default function LoginScreen() {
         birthDate: data.birthDate,
         loginMethod: "이메일 계정",
         age: data.age,
+        tf:data.tf
       }
       localStorage.setItem("user", JSON.stringify(userData))
       router.push(`/${userData.pk}/chat`)

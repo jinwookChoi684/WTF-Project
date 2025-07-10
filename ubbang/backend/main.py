@@ -91,7 +91,8 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
         mode=user.mode,
         worry=user.worry,
         socialId=user.socialId,
-        age=user.age
+        age=user.age,
+        tf=user.tf
     )
 
     try:
@@ -118,7 +119,8 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
                 "mode": new_user.mode,
                 "worry": new_user.worry,
                 "birthDate": new_user.birthDate,
-                "age": new_user.age
+                "age": new_user.age,
+                "tf": new_user.tf
                 }
     except SQLAlchemyError as e:
         db.rollback()
@@ -165,6 +167,7 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
         "loginMethod": "이메일 계정",
         "isAnonymous": False,
         "age": db_user.age,
+        "tf": db_user.tf
 
     }
 
