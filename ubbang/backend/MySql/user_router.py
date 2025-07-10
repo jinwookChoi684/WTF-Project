@@ -18,6 +18,7 @@ class UserUpdateRequest(BaseModel):
     gender: str
     mode: str
     worry: str
+    tf: str
 
 # ✅ 로그인 요청용
 class LoginRequest(BaseModel):
@@ -46,6 +47,7 @@ def update_user(data: UserUpdateRequest, db: Session = Depends(get_db)):
     user.gender = data.gender
     user.mode = data.mode
     user.worry = data.worry
+    user.tf = data.tf
 
     db.commit()
     db.refresh(user)
@@ -59,7 +61,8 @@ def update_user(data: UserUpdateRequest, db: Session = Depends(get_db)):
         "worry": user.worry,
         "birthDate": user.birthDate.strftime("%Y-%m-%d") if user.birthDate else None,
         "loginMethod": user.loginMethod if hasattr(user, "loginMethod") else None,
-        "age": user.age
+        "age": user.age,
+        "tf": user.tf
     }
 
 
@@ -116,7 +119,10 @@ def login(data: LoginRequest = Body(...), db: Session = Depends(get_db)):
         "worry": user.worry,
         "birthDate": str(user.birthDate),
         "age": user.age,
-        "loginMethod": "이메일 계정"
+        "loginMethod": "이메일 계정",
+        "tf": user.tf # 확인해보기
+
+
     }
 
 

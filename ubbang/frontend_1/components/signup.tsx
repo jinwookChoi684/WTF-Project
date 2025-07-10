@@ -1,7 +1,7 @@
 "use client"
 
+import { useUser } from "@/hooks/useUser"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,14 +11,23 @@ import { ArrowLeft, User, Mail, Lock, Calendar, MessageCircle, Heart } from "luc
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { Calendar as DatePicker } from "@/components/ui/calendar"
+import { format } from "date-fns";
 
 interface SignupProps {
-  onComplete: (userInfo: { pk: string }) => void
+  onComplete: (userData: {
+    pk: number
+    name: string
+    userId: string
+    gender: string
+    mode: string
+    worry: string
+    birthDate: string
+  }) => void
   onBack: () => void
 }
 
 export default function Signup({ onComplete, onBack }: SignupProps) {
-  const router = useRouter()
+  const { setUser } = useUser()
   const [formData, setFormData] = useState({
     name: "",
     userId: "",
@@ -30,8 +39,8 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     gender: "",
     worry: "",
     birthDate: "",
-    mode: "",
-    currentConcern: "",
+    mode:"",
+    tf:"",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -48,89 +57,121 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     const newErrors: Record<string, string> = {}
 
     if (!formData.userId.trim()) newErrors.userId = "아이디를 입력해주세요"
-    else if (formData.userId.length < 4) newErrors.userId = "아이디는 4자 이상이어야 합니다"
+    if (formData.userId.length < 4) newErrors.userId = "아이디는 4자 이상이어야 합니다"
 
     if (!formData.password.trim()) newErrors.password = "비밀번호를 입력해주세요"
-    else if (formData.password.length < 6) newErrors.password = "비밀번호는 6자 이상이어야 합니다"
+    if (formData.password.length < 6) newErrors.password = "비밀번호는 6자 이상이어야 합니다"
 
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "비밀번호가 일치하지 않습니다"
     }
 
     if (!formData.email.trim()) newErrors.email = "이메일을 입력해주세요"
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "올바른 이메일 형식이 아닙니다"
     }
 
     if (!formData.age) newErrors.age = "나이를 선택해주세요"
     if (!formData.mode) newErrors.mode = "말투를 선택해주세요"
     if (!formData.gender) newErrors.gender = "성별을 선택해주세요"
+    if (!formData.tf) newErrors.tf = "이성적(T) 공감적(F) 대화스타일을 선택해주세요"
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async () => {
-    if (!validateForm()) return
+const handleSubmit = async () => {
+  console.log("폼 제출 시도됨")
 
-    setStep("submitting")
+  if (!validateForm()) {
+    console.log("유효성 검사 실패")
+    console.log("입력값 확인:", formData)
+    return
+  }
 
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+  console.log("Fetch 요청 보냄!")
+
+  setStep("submitting")
+
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/signup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+      name: formData.name,
+      userId: formData.userId,
+      password: formData.password,
+      email: formData.email,
+      gender: formData.gender,
+      birthDate: formData.birthDate,
+      socialId: formData.socialId || null,
+      mode: formData.mode,
+      worry: formData.currentConcern || null,
+      age: Number(formData.age),
+      tf:formData.tf
+      }),
+    })
+    console.log("✅ BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL)
+
+    console.log("응답 상태코드:", response.status)
+
+    const responseClone = response.clone()
+    const resText = await responseClone.text()
+    console.log("서버 응답 텍스트:", resText)
+
+    if (response.ok) {
+      const data = await response.json()
+      console.log("✅ 가입 완료:", data)
+
+      // ✅ 로그인과 동일한 형식으로 localStorage 저장
+    const localStorageUserData = {
+      pk: data.pk,
+      userId: data.userId,
+      name: data.name,
+      gender: data.gender,
+      mode: data.mode,
+      worry: data.worry,
+      birthDate: data.birthDate,
+      loginMethod: data.loginMethod,
+      tf: data.tf,  // 기본값 설정
+      age: Number(formData.age),
+    }
+    localStorage.setItem("user", JSON.stringify(localStorageUserData))
+
+      setStep("complete")
+
+      setTimeout(() => {
+        const onCompleteUserData = {
+          pk: data.pk, // ← 서버에서 받아온 응답에 포함되어야 함
           name: formData.name,
           userId: formData.userId,
-          password: formData.password,
-          email: formData.email,
           gender: formData.gender,
-          birthDate: formData.birthDate,
-          socialId: formData.socialId || null,
           mode: formData.mode,
-          worry: formData.currentConcern || null,
-          age: Number(formData.age),
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-
-        const userInfo = {
-          pk: data.pk,
-          userId: data.userId,
-          name: data.name,
-          gender: data.gender,
-          mode: data.mode,
-          worry: data.worry,
-          birthDate: data.birthDate,
-          loginMethod: "이메일 계정",
-          age: Number(data.age),
+          tf:formData.tf,
+          worry: formData.currentConcern || "",
+          birthDate: formData.birthDate,
         }
-
-        localStorage.setItem("user", JSON.stringify(userInfo))
-        setStep("complete")
-        onComplete(userInfo)
-      } else {
-        const text = await response.text()
-        console.error("❌ 회원가입 실패:", text)
-        alert("회원가입 중 오류가 발생했습니다.")
-        setStep("form")
-      }
-    } catch (error) {
-      console.error("❌ 서버 연결 실패:", error)
-      alert("서버에 연결할 수 없습니다.")
+        onComplete(onCompleteUserData)
+        }, 1500)
+    } else {
+      console.error("❌ 회원가입 실패:", resText)
+      alert("회원가입 중 오류가 발생했습니다.")
       setStep("form")
     }
+  } catch (error) {
+    console.error("❌ 서버 연결 실패:", error)
+    alert("서버에 연결할 수 없습니다.")
+    setStep("form")
   }
+}
 
   const generateAgeOptions = () => {
     const options = []
     for (let i = 13; i <= 80; i++) {
-      options.push(
-        <SelectItem key={i} value={i.toString()}>
+    options.push(
+      <SelectItem key={i} value={i.toString()}>
           {i}세
         </SelectItem>
       )
@@ -138,18 +179,16 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     return options
   }
 
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
       <div className="w-full max-w-md space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="text-gray-600 hover:text-gray-800">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-600 hover:text-gray-800">
             <ArrowLeft className="w-4 h-4 mr-2" />
             돌아가기
           </Button>
         </div>
 
-        {/* 이후 UI 구성은 기존과 동일하게 유지 */}
         {step === "form" && (
           <>
             <div className="text-center space-y-4">
@@ -308,8 +347,18 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
                         toYear={2020}
                         onSelect={(date: Date | undefined) => {
                           if (date) {
-                            handleInputChange("birthDate", date.toISOString().split("T")[0])
+                            const year = date.getFullYear();
+                            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                            const day = date.getDate().toString().padStart(2, '0');
+                            handleInputChange("birthDate", `${year}-${month}-${day}`);
                           }
+                        }}
+                        components={{
+                          CaptionLabel: ({ displayMonth }) => (
+                            <span className="text-sm font-medium">
+                              {format(displayMonth, "LLLL yyyy")}
+                            </span>
+                            ),
                         }}
                       />
                     </PopoverContent>
@@ -374,6 +423,31 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
                   </Select>
                   {errors.mode && <p className="text-xs text-red-600">{errors.mode}</p>}
                 </div>
+
+                {/* T/F 성향 선택 */}
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 flex items-center">
+                    성향 (감성/이성)
+                  </label>
+                  <Select
+                    value={formData.tf}
+                    onValueChange={(value) => handleInputChange("tf", value)}
+                  >
+                    <SelectTrigger
+                      className={`h-12 border-gray-200 focus:border-amber-300 focus:ring-amber-200 rounded-xl ${
+                        errors.tf ? "border-red-300" : ""
+                      }`}
+                    >
+                      <SelectValue placeholder="대화스타일을 선택해주세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="f">감성형 (Feeling)</SelectItem>
+                      <SelectItem value="t">이성형 (Thinking)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.tf && <p className="text-xs text-red-600">{errors.tf}</p>}
+                </div>
+
 
                 {/* Current Concern */}
                 <div className="space-y-1">
