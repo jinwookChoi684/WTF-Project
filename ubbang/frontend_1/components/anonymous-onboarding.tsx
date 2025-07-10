@@ -50,6 +50,7 @@ export default function AnonymousOnboarding({ onComplete, onBack }: AnonymousOnb
       email: `anonymous_${timestamp}@none.com`,
       gender,
       birthDate: null,
+      tf: "t",
       socialId: null,
       mode,
       worry: null,
@@ -59,13 +60,14 @@ export default function AnonymousOnboarding({ onComplete, onBack }: AnonymousOnb
     const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
     try {
-      const response = await fetch(`${apiUrl}/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userDataA),
-      })
+        const response = await fetch(`${apiUrl}/users/signup`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(userDataA),
+        })
+
 
       const res = await response.json()
      if (!res.pk) {

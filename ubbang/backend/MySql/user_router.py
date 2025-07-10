@@ -6,6 +6,8 @@ from MySql.models import User
 from passlib.context import CryptContext
 from MySql.schemas import UserCreate
 from MySql.models import User as UserModel
+from typing import Optional
+from datetime import date
 
 router = APIRouter(prefix="/users")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -75,6 +77,7 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
 
     hashed_password = pwd_context.hash(user.password)
     new_user = User(
+
         userId=user.userId,
         name=user.name,
         password=hashed_password,

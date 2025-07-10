@@ -16,9 +16,9 @@ import logging  # 로깅 모듈 임포트
 from app import chat
 from app import diary
 from MySql.user_router import router as user_router
+from naver_oauth import router as naver_router
 import asyncio
 # from app.idle_checker import start_idle_checker
-
 # from redis_utiles.redis_client import save_chat_message, get_recent_messages, cache_user_info
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -36,10 +36,13 @@ app = FastAPI()
 app.include_router(chat.router)
 app.include_router(diary.router)
 app.include_router(user_router)
+app.include_router(naver_router)
+
+
+
 origins = [
     "*"
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -118,7 +121,7 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
                 "gender": new_user.gender,
                 "mode": new_user.mode,
                 "worry": new_user.worry,
-                "birthDate": new_user.birthDate,
+                "birthDate": new_user.birthDate.strftime("%Y-%m-%d") if new_user.birthDate else None,  # ✅ 고침
                 "age": new_user.age,
                 "tf": new_user.tf
                 }

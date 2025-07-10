@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,7 +27,9 @@ interface UserData {
   tf: string
 }
 
-export default function ProfileSettings({ onLogout }: { onLogout: () => void }) {
+export default function ProfileSettings() {
+  const router = useRouter()
+
   const [user, setUser] = useState<UserData | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState<UserData | null>(null)
@@ -42,6 +45,22 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
     }
   }, [])
 
+/*로그아웃시에 localStorage에 있는 데이터 삭제 */
+  const onLogout = () => {
+    localStorage.clear()
+    sessionStorage.clear()
+    router.push("/")
+
+    const loginMethod = user?.loginMethod
+
+    if (loginMethod === "naver") {
+      window.location.href = "https://nid.naver.com/nidlogin.logout"
+       router.push("/")
+    } else {
+      router.push("/")
+    }
+  }
+
   const handleSave = async () => {
     if (!editData) return
 
@@ -54,13 +73,7 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
       tf: editData.tf ?? "f"
     }
 
-    console.log("보내는 payload:", payload)
-
     try {
-        /*
-        혜빈님께 받은 코드는 `update-user`였어요. 제가 라우터 정리하다가 수정된 라우터들이 꽤 있는데
-        user을 넣어야 수정 작동합니다 확인한번만 해주세요 !!
-        */
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/update-user`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

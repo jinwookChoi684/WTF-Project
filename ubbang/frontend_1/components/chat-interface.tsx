@@ -73,7 +73,10 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
 
     const timeout = setTimeout(() => {
       hasConnectedOnce.current = true
-      const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=${tf}`
+      const httpBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+        const wsBaseUrl = httpBaseUrl.replace(/^http/, "ws")
+
+        const wsUrl = `${wsBaseUrl}/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=${tf}`
       console.log("📡 WebSocket 연결 URL:", wsUrl)
 
       if (ws.current) {
