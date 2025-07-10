@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
 import { User, Bell, Shield, LogOut } from "lucide-react"
 
 interface UserData {
@@ -17,7 +23,7 @@ interface UserData {
   worry: string
   birthDate: string
   loginMethod: string
-  tf:string
+  tf: string
 }
 
 export default function ProfileSettings({ onLogout }: { onLogout: () => void }) {
@@ -36,46 +42,48 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
     }
   }, [])
 
-  if (!user || !editData) return <div className="text-center mt-10 text-gray-500">유저 정보를 불러오는 중...</div>
+  const handleSave = async () => {
+    if (!editData) return
 
-     const handleSave = async () => {
-      if (!editData) return
-
-      const payload = {
-        pk: Number(editData.pk),            // 정수형으로 확실히 변환
-        name: editData.name ?? "",          // null 방지
-        gender: editData.gender ?? "etc",
-        mode: editData.mode ?? "banmal",
-        worry: editData.worry ?? "",        // 핵심: null → 빈 문자열
-        tf: editData.tf ?? "f",
-      }
-
-      console.log("보내는 payload:", payload)
-
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/update-user`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-
-        if (!response.ok) {
-          const err = await response.json()
-          alert(err.detail || "수정 실패")
-          return
-        }
-
-        const updatedUser = await response.json()
-        setUser(updatedUser)
-        setEditData(updatedUser)
-        localStorage.setItem("user", JSON.stringify(updatedUser))
-        setIsEditing(false)
-        alert("수정 완료!")
-      } catch (err) {
-        console.error("수정 실패:", err)
-        alert("서버 오류")
-      }
+    const payload = {
+      pk: Number(editData.pk),
+      name: editData.name ?? "",
+      gender: editData.gender ?? "etc",
+      mode: editData.mode ?? "banmal",
+      worry: editData.worry ?? "",
+      tf: editData.tf ?? "f"
     }
+
+    console.log("보내는 payload:", payload)
+
+    try {
+        /*
+        혜빈님께 받은 코드는 `update-user`였어요. 제가 라우터 정리하다가 수정된 라우터들이 꽤 있는데
+        user을 넣어야 수정 작동합니다 확인한번만 해주세요 !!
+        */
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/update-user`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const err = await response.json()
+        alert(err.detail || "수정 실패")
+        return
+      }
+
+      const updatedUser = await response.json()
+      setUser(updatedUser)
+      setEditData(updatedUser)
+      localStorage.setItem("user", JSON.stringify(updatedUser))
+      setIsEditing(false)
+      alert("수정 완료!")
+    } catch (err) {
+      console.error("수정 실패:", err)
+      alert("서버 오류")
+    }
+  }
 
   const handleDeleteAccount = async () => {
     const confirmDelete = window.confirm("정말 계정을 삭제하시겠어요?")
@@ -85,7 +93,7 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/delete-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.userId }),
+        body: JSON.stringify({ userId: user?.userId })
       })
 
       if (!response.ok) {
@@ -102,6 +110,9 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
       alert("서버 오류")
     }
   }
+
+  if (!user || !editData)
+    return <div className="text-center mt-10 text-gray-500">유저 정보를 불러오는 중...</div>
 
   return (
     <div className="min-h-screen p-4">
@@ -122,28 +133,36 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
             <CardDescription>수정하려면 아래 버튼 눌러~</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* name */}
+            {/* 이름 */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">이름</label>
               {isEditing ? (
-                <Input value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} />
+                <Input
+                  value={editData.name}
+                  onChange={e => setEditData({ ...editData, name: e.target.value })}
+                />
               ) : (
                 <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-800">{user.name}</div>
               )}
             </div>
 
-            {/* userId (readonly) */}
+            {/* 아이디 */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">아이디</label>
               <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-800">{user.userId}</div>
             </div>
 
-            {/* gender */}
+            {/* 성별 */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">성별</label>
               {isEditing ? (
-                <Select value={editData.gender} onValueChange={val => setEditData({ ...editData, gender: val })}>
-                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                <Select
+                  value={editData.gender}
+                  onValueChange={val => setEditData({ ...editData, gender: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="선택" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="male">남자</SelectItem>
                     <SelectItem value="female">여자</SelectItem>
@@ -155,12 +174,17 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
               )}
             </div>
 
-            {/* mode */}
+            {/* 말투 */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">말투</label>
               {isEditing ? (
-                <Select value={editData.mode} onValueChange={val => setEditData({ ...editData, mode: val })}>
-                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                <Select
+                  value={editData.mode}
+                  onValueChange={val => setEditData({ ...editData, mode: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="선택" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="banmal">반말</SelectItem>
                     <SelectItem value="jondaemal">존댓말</SelectItem>
@@ -170,16 +194,20 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
                 <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-800">
                   {user.mode === "banmal" ? "반말" : "존댓말"}
                 </div>
-
               )}
             </div>
 
-            {/* tf (감성/이성) */}
+            {/* 성향 */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">성향</label>
               {isEditing ? (
-                <Select value={editData.tf} onValueChange={val => setEditData({ ...editData, tf: val })}>
-                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                <Select
+                  value={editData.tf}
+                  onValueChange={val => setEditData({ ...editData, tf: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="선택" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="f">감성형</SelectItem>
                     <SelectItem value="t">이성형</SelectItem>
@@ -192,7 +220,7 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
               )}
             </div>
 
-            {/* worry */}
+            {/* 고민 */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">최근 고민</label>
               {isEditing ? (
@@ -207,22 +235,33 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
               )}
             </div>
 
-
-            {/* birthDate (readonly) */}
+            {/* 생년월일 */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">생년월일</label>
               <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-800">{user.birthDate}</div>
             </div>
 
-            {/* buttons */}
+            {/* 버튼 */}
             <div className="flex justify-end space-x-2 pt-2">
               {isEditing ? (
                 <>
-                  <Button onClick={handleSave} className="bg-amber-500 hover:bg-amber-600 text-white">저장</Button>
-                  <Button variant="outline" onClick={() => { setIsEditing(false); setEditData(user); }}>취소</Button>
+                  <Button onClick={handleSave} className="bg-amber-500 hover:bg-amber-600 text-white">
+                    저장
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditing(false)
+                      setEditData(user)
+                    }}
+                  >
+                    취소
+                  </Button>
                 </>
               ) : (
-                <Button onClick={() => setIsEditing(true)} variant="outline">수정</Button>
+                <Button onClick={() => setIsEditing(true)} variant="outline">
+                  수정
+                </Button>
               )}
             </div>
           </CardContent>
@@ -249,7 +288,9 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">선톡 시간</label>
                 <Select value={notificationTime} onValueChange={setNotificationTime}>
-                  <SelectTrigger><SelectValue placeholder="시간 선택" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="시간 선택" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="09:00">오전 9시</SelectItem>
                     <SelectItem value="12:00">오후 12시</SelectItem>
@@ -276,8 +317,7 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
               <h4 className="text-sm font-medium text-amber-800 mb-2">데이터 보호</h4>
               <p className="text-xs text-amber-700 leading-relaxed">
-                모든 대화 내용은 암호화되어 저장하고, 개인정보는 대화 목적으로만 사용하고 있어. 언제든지 계정 삭제를 통해
-                모든 데이터를 완전히 제거할 수 있으니까 편하게 말해도 돼.
+                모든 대화 내용은 암호화되어 저장하고, 개인정보는 대화 목적으로만 사용하고 있어. 언제든지 계정 삭제를 통해 모든 데이터를 완전히 제거할 수 있으니까 편하게 말해도 돼.
               </p>
             </div>
             <Button
