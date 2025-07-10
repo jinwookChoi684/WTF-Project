@@ -1,4 +1,3 @@
-
 ## GPT 응답생성
 ## 시스템 프롬프트, 메모리 기반 응답, 쿼리 타입 감지 포함
 
@@ -32,6 +31,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
+from typing import List
+from openai import AsyncOpenAI
 
 # --------------------------------------------------------------------------------
 
@@ -62,7 +63,6 @@ def get_user_memory(pk: str) -> ConversationBufferMemory:
 
     user_memory_store[pk] = memory
     return memory
-
 
 
 # --------------------------------------------------------------------------------
@@ -100,6 +100,7 @@ async def get_chatbot_response(
         print(f"[Chatbot 응답 실패] {e}")
         return "⚠️ 답변 생성 중 오류가 발생했어요."
 
+
 # ---------------------------------------------------------------------------------
 
 # 쿼리 타입 감지 (개인기록 / 외부정보 / 일반대화)
@@ -126,13 +127,13 @@ from .faiss_helper import search_from_faiss
 
 
 async def get_rag_response(
-    user_input: str,
-    memory: ConversationBufferMemory,
-    pk: str,
-    gender: str,
-    mode: str,
-    age: int,
-    tf: str
+        user_input: str,
+        memory: ConversationBufferMemory,
+        pk: str,
+        gender: str,
+        mode: str,
+        age: int,
+        tf: str
 ) -> str:
     # 1. FAISS 검색
     retrieved_chunks = search_from_faiss(pk, user_input, k=10)
@@ -140,7 +141,7 @@ async def get_rag_response(
         return "🧠 과거 대화 중 관련된 내용을 찾지 못했어. 다시 한번 말해줄 수 있을까?"
 
     # 2. context 합치기
-    context_summary = "\n".join([chunk for chunk in retrieved_chunks])
+    context_summary = await summarize_chunks(retrieved_chunks[:10])
 
     # 3. 시스템 프롬프트 생성
     prompt_builder = BasePromptBuilder(gender=gender, mode=mode, age=age, tf=tf)
@@ -155,7 +156,7 @@ async def get_rag_response(
         faiss_context=context_summary
     )
 
-    
+
 # ✅ 벡터 검색 필요 여부 판단 (vector vs memory)
 def should_use_vector_search(user_input: str) -> bool:
     try:
@@ -183,3 +184,60 @@ def should_use_vector_search(user_input: str) -> bool:
         print(f"[쿼리 분류 실패] {e}")
         return False
 
+
+# 🔽 🔽 이거 새로 추가해!
+async def summarize_chunks(chunks: List[str]) -> str:
+    if not chunks:
+        return ""
+    summary_prompt = f"""
+다음은 과거의 대화 기록이야. 이걸 보고 핵심 내용을 한 단락으로 정리해줘. 너무 길게 말하지 말고 간결하게 정리해줘.
+
+---
+
+{chr(10).join(chunks)}
+
+---
+요약:"""
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": summary_prompt}],
+            temperature=0.3,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[요약 실패] {e}")
+        return ""
+
+
+# -- 생성되는 대로 보낼 수 있게 streming 추가 ----------------------------------
+stream_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # 기존 client랑 충돌 방지
+
+# ✅ 스트리밍 GPT 응답 생성기
+async def stream_gpt_response(system_prompt: str, memory: ConversationBufferMemory, user_input: str):
+    try:
+        messages = [
+            {"role": "system", "content": system_prompt},
+        ]
+        # memory를 chat format으로 추가
+        for msg in memory.chat_memory.messages:
+            role = "user" if msg.type == "human" else "assistant"
+            messages.append({"role": role, "content": msg.content})
+        messages.append({"role": "user", "content": user_input})
+
+        # 스트리밍 요청
+        response = await stream_client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            temperature=0.7,
+            stream=True,
+        )
+
+        async for chunk in response:
+            delta = chunk.choices[0].delta
+            if delta and delta.content:
+                yield delta.content
+    except Exception as e:
+        print(f"[Stream 응답 오류] {e}")
+        yield "⚠️ 오류가 발생했어요."

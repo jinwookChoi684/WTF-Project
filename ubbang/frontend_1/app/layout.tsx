@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "WhaT's your Feeling",
   description: 'Created with Ubbang',
   generator: 'team Ubbang',
+  icons: {
+    icon: '/favicon.ico', // ✅ public 경로 기준
+  },
 }
 
 export default function RootLayout({

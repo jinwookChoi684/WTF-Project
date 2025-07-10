@@ -1,10 +1,9 @@
-
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import os, uuid, time, asyncio
 from dotenv import load_dotenv
 import boto3
 from boto3.dynamodb.conditions import Key
-
+from fastapi import APIRouter, HTTPException
 from .BasePrompt_builder import BasePromptBuilder
 
 from .openai_helper import (
@@ -12,7 +11,9 @@ from .openai_helper import (
     get_user_memory,
     detect_query_type,
     get_rag_response,
-    should_use_vector_search)
+    should_use_vector_search,
+    summarize_chunks,
+    stream_gpt_response)
 
 from .weather import get_weather_data
 from .utils import extract_city_from_message, get_today_datetime_info
@@ -22,7 +23,7 @@ from .naver_helper import get_external_info
 from .faiss_helper import save_to_faiss, search_from_faiss
 from datetime import datetime
 
-from .dynamo_utils import get_recent_messages_from_dynamo
+
 
 # -------------------------------------------------------------------------------
 
@@ -30,6 +31,7 @@ load_dotenv()
 router = APIRouter()
 dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
 table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages"))
+
 
 # -------------------------------------------------------------------------------
 
@@ -46,13 +48,13 @@ def update_last_active_time(pk: str):
 
 
 # 메시지 저장
-def save_message_to_dynamo(pk: str, userId: str,  role: str, content: str, gender: str, tf: str):
+def save_message_to_dynamo(pk: str, userId: str, role: str, content: str, gender: str, tf: str):
     try:
         table.put_item(
             Item={
-                "pk": str(pk),                  # 파티션 키
+                "pk": str(pk),  # 파티션 키
                 "timestamp": int(time.time()),  # 정렬 키
-                "userId": str(userId),          # 참고용
+                "userId": str(userId),  # 참고용
                 "gender": gender,
                 "tf": str(tf),
                 "role": role,
@@ -88,7 +90,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
     embedding_counter = 0
     buffered_messages = []
-    
 
     try:
         while True:
@@ -100,7 +101,8 @@ async def websocket_endpoint(websocket: WebSocket):
             update_last_active_time(pk)
 
             # ✅ 2. 날씨/시간 판단 → 자동응답
-            contextual_reply = await get_contextual_info_reply(user_input=user_msg, system_prompt=system_prompt,memory=memory)
+            contextual_reply = await get_contextual_info_reply(user_input=user_msg, system_prompt=system_prompt,
+                                                               memory=memory)
             if contextual_reply:
                 save_message_to_dynamo(pk, userId, "assistant", contextual_reply, gender, tf)
                 memory.chat_memory.add_user_message(user_msg)
@@ -116,22 +118,31 @@ async def websocket_endpoint(websocket: WebSocket):
                 reply = get_external_info(user_msg, mode, memory)
 
             else:
+                # 벡터 검색 판단 & 요약
                 retrieved_chunks = search_from_faiss(pk, user_msg) if should_use_vector_search(user_msg) else []
+                context_summary = await summarize_chunks(retrieved_chunks[:10]) if retrieved_chunks else None
 
-                reply = await get_chatbot_response(
-                    pk=pk,
-                    user_input=user_msg,
-                    system_prompt=system_prompt,
-                    memory=memory,
-                    faiss_context="\n".join(retrieved_chunks) if retrieved_chunks else None
-                )
+                # 요약 context 포함해서 system_prompt 확장
+                system_prompt_with_context = system_prompt
+                if context_summary:
+                    system_prompt_with_context += f"\n\n# 유저 과거 요약 내용:\n{context_summary}"
+
+                # ✅ streaming 응답 시작
+                await websocket.send_text("...")  # 👈 입력 중 표시
+
+                full_response = ""
+                async for token in stream_gpt_response(system_prompt_with_context, memory, user_msg):
+                    await websocket.send_text(token)
+                    full_response += token
+
+                reply = full_response
 
             # ✅ 4. 응답 저장 및 전송 + 활동 시간 갱신
             save_message_to_dynamo(pk, userId, "assistant", reply, gender, tf)
             update_last_active_time(pk)
             memory.chat_memory.add_user_message(user_msg)
             memory.chat_memory.add_ai_message(reply)
-            await websocket.send_text(reply)
+
 
             # ✅ 5. FAISS 업데이트 (10턴 마다 저장)
             buffered_messages.append({"role": "user", "content": user_msg})
@@ -152,4 +163,28 @@ async def websocket_endpoint(websocket: WebSocket):
     finally:
         if buffered_messages:
             print("📦 WebSocket 종료 시점 FAISS 저장 실행")
-            save_to_faiss(pk, buffered_messages)    
+            save_to_faiss(pk, buffered_messages)
+
+# 과거 대화내용 프론트에 띄우기
+chat_router = APIRouter()
+@router.get("/chat/history")
+def get_chat_history(pk: str):
+    try:
+        response = table.query(
+            KeyConditionExpression=Key("pk").eq(pk),
+            ScanIndexForward=True  # 오래된 순 정렬
+        )
+        items = response.get("Items", [])
+        return [
+            {
+                "id": item.get("message_id", f"{item['pk']}_{item['timestamp']}"),
+                "content": item["content"],
+                "sender": "ai" if item["role"] == "assistant" else "user",
+                "timestamp": datetime.fromtimestamp(item["timestamp"]).isoformat()
+            }
+            for item in items if item["timestamp"] != 0
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DynamoDB 조회 실패: {str(e)}")
+
+

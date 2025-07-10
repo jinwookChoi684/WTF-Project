@@ -8,6 +8,8 @@ import { Send, Clock } from "lucide-react"
 import MessageBubble from "@/components/message-bubble"
 import SessionSummary from "@/components/session-summary"
 
+import { useRouter } from "next/navigation"
+
 interface Message {
   id: string
   content: string
@@ -25,38 +27,38 @@ interface ChatInterfaceProps {
     mode: string
     worry: string
     birthDate: string
+    age: number
     tf:string
   }
 }
 
-export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
+export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {const router = useRouter()
   const { user } = useUser()
-
-  // ✅ Hook들 최상단 선언
   const ws = useRef<WebSocket | null>(null)
+
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [isUserTyping, setIsUserTyping] = useState(false)
+  const [currentScreen, setCurrentScreen] = useState("chat")
+
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const hasConnectedOnce = useRef(false)
+  const [currentAiMessage, setCurrentAiMessage] = useState<Message | null>(null)
 
-  // ✅ user fallback 처리
-   const activeUser = user ?? initialUserInfo ?? {}
-   const pk = activeUser.pk ?? 0
-   const userId = activeUser.userId ?? "anonymous"
-   const userName = activeUser.name ?? "사용자"
-   const gender = activeUser.gender ?? "female"
-   const mode = activeUser.mode ?? "banmal"
-   const age = activeUser.age ?? "25"
-   const tf = activeUser.tf ?? "f"
-   // 비회원
-   const localUser = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("userInfo") || "{}") : {}
-
-
+  const activeUser = user ?? initialUserInfo ?? {}
+  const pk = activeUser.pk ?? 0
+  const userId = activeUser.userId ?? "anonymous"
+  const userName = activeUser.name ?? "사용자"
+  const gender = activeUser.gender ?? "female"
+  const mode = activeUser.mode ?? "banmal"
+  const age = Number(activeUser.age) || 25
+  const tf = activeUser.tf ?? "f"
 
   useEffect(() => {
+    if (messages.length === 0)
     setMessages([
       {
         id: "1",
@@ -68,51 +70,75 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   }, [userName])
 
   useEffect(() => {
-      // ✅ pk 유효성 검사: 0 또는 undefined면 연결 X
-      if (!pk) {
-        console.log("🚫 WebSocket 연결 생략: 유효하지 않은 pk", pk)
-        return
+    if (!pk || hasConnectedOnce.current) return
+
+    const timeout = setTimeout(() => {
+      hasConnectedOnce.current = true
+      const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=${tf}`
+      console.log("📡 WebSocket 연결 URL:", wsUrl)
+
+      if (ws.current) {
+        ws.current.close()
+        ws.current = null
       }
 
-    // ✅ 이미 연결된 경우 중복 방지
-    if (ws.current) {
-      console.log("ℹ️ 이미 WebSocket 연결되어 있음. 중복 연결 생략")
-      return
-    }
+      const socket = new WebSocket(wsUrl)
+      ws.current = socket
 
-    const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=${tf}`
-    console.log("📡 WebSocket 연결 URL:", wsUrl)
-
-    ws.current = new WebSocket(wsUrl)
-
-    ws.current.onmessage = (event) => {
-      const aiMessage: Message = {
-        id: Date.now().toString(),
-        content: event.data,
-        sender: "ai",
-        timestamp: new Date(),
+      socket.onopen = () => {
+        console.log("✅ WebSocket 연결됨")
       }
-      setMessages((prev) => [...prev, aiMessage])
-      setIsTyping(false)
-    }
 
-    ws.current.onopen = () => console.log("✅ WebSocket 연결됨")
-    ws.current.onerror = () => console.log("❌ WebSocket 오류 발생")
-    ws.current.onclose = () => {
-      console.log("🔌 WebSocket 종료됨")
-      ws.current = null
-    }
+      socket.onmessage = (event) => {
+        if (event.data === "...") {
+          setIsTyping(true)
+          return
+        }
+
+        setIsTyping(false)
+
+        setCurrentAiMessage((prev) => {
+          if (prev) {
+            return { ...prev, content: prev.content + event.data }
+          } else {
+            return {
+              id: Date.now().toString(),
+              content: event.data,
+              sender: "ai",
+              timestamp: new Date(),
+            }
+          }
+        })
+      }
+
+      socket.onerror = () => {
+        console.log("❌ WebSocket 오류 발생")
+        socket.close()
+        ws.current = null
+
+        setTimeout(() => {
+          console.log("🔁 WebSocket 재연결 시도 중...")
+          hasConnectedOnce.current = false
+        }, 1000)
+      }
+
+      socket.onclose = () => {
+        console.log("🔌 WebSocket 종료됨")
+        ws.current = null
+      }
+    }, 300)
 
     return () => {
+      clearTimeout(timeout)
       console.log("🧹 WebSocket cleanup")
       ws.current?.close()
       ws.current = null
     }
-  }, [pk, mode, gender])
+  }, [pk, mode, gender, age])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  }, [messages, currentAiMessage, isTyping])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputMessage(e.target.value)
@@ -127,21 +153,28 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   const handleSendMessage = () => {
     if (!inputMessage.trim() || isUserTyping) return
 
+    if (currentAiMessage) {
+      setMessages((prev) => {
+        // ✅ ID 중복 방지
+        if (prev.some((m) => m.id === currentAiMessage.id)) return prev
+        return [...prev, currentAiMessage]
+      })
+      setCurrentAiMessage(null)
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputMessage,
       sender: "user",
       timestamp: new Date(),
     }
-    setIsTyping(true)
+
     ws.current?.send(inputMessage)
     setMessages((prev) => [...prev, userMessage])
     setInputMessage("")
     setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, 50);
+      inputRef.current?.focus()
+    }, 50)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -151,33 +184,93 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
     }
   }
 
+  useEffect(() => {
+      setMessages([
+        {
+          id: "1",
+          content: `안녕하세요 ${userName}님! 저는 우빵이입니다. 오늘 하루는 어떠셨나요? 편안하게 이야기해 주세요.`,
+          sender: "ai",
+          timestamp: new Date(),
+        },
+      ])
+    }, [userName])
+
+    useEffect(() => {
+      const loadChatHistory = async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/chat/history?pk=${pk}`)
+          const data = await res.json()
+
+          const restoredMessages: Message[] = data.map((item: any) => ({
+            id: item.id,
+            content: item.content,
+            sender: item.sender,
+            timestamp: new Date(item.timestamp),
+          }))
+
+          setMessages(restoredMessages)
+        } catch (err) {
+          console.error("❌ 대화 기록 불러오기 실패:", err)
+        }
+      }
+
+      if (pk) {
+        loadChatHistory()
+      }
+    }, [pk])
+
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center space-x-3">
-            <img
-              src="/images/bread2.png"
-              alt="서포터 프로필"
-              className="w-10 h-10 rounded-full border-2 border-amber-200 shadow-sm"
-            />
-            <div>
-              <h1 className="text-lg font-semibold text-gray-800">우빵이</h1>
-              <p className="text-sm text-gray-500">WhaT's your Feeling</p>
+        <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center space-x-3">
+              <img
+                src="/images/bread2.png"
+                alt="서포터 프로필"
+                className="w-10 h-10 rounded-full border-2 border-amber-200 shadow-sm"
+              />
+              <div>
+                <h1 className="text-lg font-semibold text-gray-800">우빵이</h1>
+                <p className="text-sm text-gray-500">WhaT's your Feeling</p>
+              </div>
             </div>
+
+          <div className="flex justify-center gap-2 px-4 pb-3">
+            <Button
+              size="sm"
+              className="bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200"
+            > 오늘도 고생했어
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => router.push(`/${pk}/chat/emotion-diary`)}
+              className="bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-200"
+            >
+              너를 추억해
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => router.push(`/${pk}/chat/character-collection`)}
+              className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-200"
+            > 나 보러와
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => router.push(`/${pk}/chat/profile`)}
+              className="bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200"
+            >
+              이게 너야
+            </Button>
+           </div>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <Clock className="w-4 h-4" />
-            <span>온라인</span>
           </div>
-        </div>
-      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <SessionSummary />
-        {messages.map((message) => (
+        {[...messages, ...(currentAiMessage ? [currentAiMessage] : [])].map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
         {isTyping && (

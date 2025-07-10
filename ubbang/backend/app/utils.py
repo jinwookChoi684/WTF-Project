@@ -71,4 +71,3 @@ def extract_city_from_message(msg: str) -> str:
         if city in msg:
             return city
     return "서울"
-

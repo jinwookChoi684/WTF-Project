@@ -1,11 +1,11 @@
 "use client"
 
-import { useUser } from "@/hooks/useUser"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Heart, Mail, Lock, MessageCircle } from "lucide-react"
-import { useState , useEffect} from "react"
 
 console.log("💡 LoginScreen 렌더링 확인!")
 
@@ -24,77 +24,71 @@ interface LoginScreenProps {
   onNavigate: (screen: string) => void
 }
 
-export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
-const { setUser } = useUser();
-const [userId, setUserId] = useState("");
-const [password, setPassword] = useState("");
-const [errors, setErrors] = useState<{ userId?: string; password?: string }>({})
 
-useEffect(() => {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-  console.log("✅ 환경변수:", baseUrl);
-}, []);
+export default function LoginScreen() {
+  const router = useRouter()
+  const [userId, setUserId] = useState("")
+  const [password, setPassword] = useState("")
+  const [errors, setErrors] = useState<{ userId?: string; password?: string }>({})
 
-const handleEmailLogin = async () => {
-  const newErrors: typeof errors = {}
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+    console.log("✅ API 주소:", baseUrl)
+  }, [])
 
-  if (!userId.trim()) newErrors.userId = "아이디를 입력해주세요"
-  if (!password.trim()) newErrors.password = "비밀번호를 입력해주세요"
+  const handleEmailLogin = async () => {
+    const newErrors: typeof errors = {}
 
-  if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors)
-    return
-  }
+    if (!userId.trim()) newErrors.userId = "아이디를 입력해주세요"
+    if (!password.trim()) newErrors.password = "비밀번호를 입력해주세요"
 
-  setErrors({})  // 에러 초기화
-
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, password }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      alert(error.detail || "로그인 실패")
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
       return
     }
 
-    const data = await response.json()
+    setErrors({})
 
-    console.log("🔐 로그인 응답 데이터:", data)
+    try {
+     localStorage.removeItem("user")
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, password }),
+      })
 
-    const userData = {
-      pk: data.pk,
-      name: data.name,
-      userId: data.userId,
-      gender: data.gender,
-      mode: data.mode,
-      worry: data.worry,
-      birthDate: data.birthDate,
-      tf:data.tf,
-      loginMethod: "이메일 계정",
+      if (!response.ok) {
+        const error = await response.json()
+        alert(error.detail || "로그인 실패")
+        return
+      }
+
+      const data = await response.json()
+        console.log("🔥 data.age 값:", data.age)
+       const userData = {
+        pk: data.pk,
+        name: data.name,
+        userId: data.userId,
+        gender: data.gender,
+        mode: data.mode,
+        worry: data.worry,
+        birthDate: data.birthDate,
+        loginMethod: "이메일 계정",
+        age: data.age,
+        tf:data.tf
+      }
+      localStorage.setItem("user", JSON.stringify(userData))
+      router.push(`/${userData.pk}/chat`)
+    } catch (err) {
+      console.error("❌ 로그인 실패:", err)
+      alert("서버 오류가 발생했습니다.")
     }
-
-    // ✅ localStorage 저장
-    localStorage.setItem("user", JSON.stringify(userData))
-
-    // ✅ 상위 컴포넌트로 전달
-    onLogin(userData)
-
-    setUser(userData)
-
-  } catch (err) {
-    alert("서버 연결 오류")
-    console.error(err)
   }
-}
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-100 via-orange-50 to-white flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Logo/Header */}
+        {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="w-16 h-16 bg-gradient-to-br from-amber-200 to-orange-200 rounded-full flex items-center justify-center shadow-lg">
@@ -107,7 +101,7 @@ const handleEmailLogin = async () => {
           </div>
         </div>
 
-        {/* Login Card */}
+        {/* Card */}
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl text-gray-800">로그인</CardTitle>
@@ -115,46 +109,47 @@ const handleEmailLogin = async () => {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {/* ID Form */}
             <div className="space-y-3">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    type="text"
-                    name="userId"
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                    autoComplete="off"
-                    placeholder="아이디"
-                    className={`pl-10 h-12 border-gray-200 focus:border-amber-300 focus:ring-amber-200 rounded-xl ${
-                      errors.userId ? "border-red-300" : ""
-                    }`}
-                  />
-                  {errors.userId && <p className="text-xs text-red-600 mt-1">{errors.userId}</p>}
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    type="password"
-                    name="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder="비밀번호"
-                    className={`pl-10 h-12 border-gray-200 focus:border-amber-300 focus:ring-amber-200 rounded-xl ${
-                      errors.password ? "border-red-300" : ""
-                    }`}
-                  />
-                  {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
-                </div>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="아이디"
+                  autoComplete="off"
+                  className={`pl-10 h-12 rounded-xl border-gray-200 focus:border-amber-300 focus:ring-amber-200 ${
+                    errors.userId ? "border-red-300" : ""
+                  }`}
+                />
+                {errors.userId && <p className="text-xs text-red-600 mt-1">{errors.userId}</p>}
               </div>
-              <Button
-                onClick={handleEmailLogin}
-                className="w-full h-12 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white rounded-xl shadow-lg transition-all duration-200"
-              >
-                로그인
-              </Button>
 
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호"
+                  autoComplete="new-password"
+                  className={`pl-10 h-12 rounded-xl border-gray-200 focus:border-amber-300 focus:ring-amber-200 ${
+                    errors.password ? "border-red-300" : ""
+                  }`}
+                />
+                {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
+              </div>
+            </div>
+
+            {/* 이메일 로그인 버튼 */}
+            <Button
+              onClick={handleEmailLogin}
+              className="w-full h-12 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white rounded-xl shadow-lg transition-all duration-200"
+            >
+              로그인
+            </Button>
+
+            {/* 구분선 */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200" />
@@ -164,42 +159,36 @@ const handleEmailLogin = async () => {
               </div>
             </div>
 
-            {/* SNS Login */}
+            {/* SNS 로그인 버튼 */}
             <Button
-              onClick={() => onNavigate("sns-auth")}
-              className="w-full h-12 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-xl shadow-lg transition-all duration-200"
-            >
-              <MessageCircle className="w-5 h-5 mr-2" />
-              카카오톡으로 로그인
-            </Button>
-                        <Button
-              onClick={() => onNavigate("sns-auth")}
-              className="w-full h-12 bg-green-400 hover:bg-green-500 text-green-900 rounded-xl shadow-lg transition-all duration-200"
-            >
-              <MessageCircle className="w-5 h-5 mr-2" />
-              네이버로 로그인
-            </Button>
-                        <Button
-              onClick={() => onNavigate("sns-auth")}
-              className="w-full h-12 bg-blue-400 hover:bg-blue-500 text-white-900 rounded-xl shadow-lg transition-all duration-200"
+              onClick={() => (window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google/login`)}
+              className="w-full h-12 bg-blue-400 hover:bg-blue-500 text-white rounded-xl shadow-lg transition-all duration-200"
             >
               <MessageCircle className="w-5 h-5 mr-2" />
               구글로 로그인
             </Button>
 
-            {/* Anonymous Login */}
             <Button
-              onClick={() => onNavigate("anonymous-onboarding")}
+              onClick={() => router.push("/sns-auth")}
+              className="w-full h-12 bg-green-400 hover:bg-green-500 text-green-900 rounded-xl shadow-lg transition-all duration-200"
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              네이버로 로그인
+            </Button>
+
+            {/* 익명 로그인 */}
+            <Button
+              onClick={() => router.push("/anonymous")}
               variant="outline"
               className="w-full h-12 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200"
             >
               비회원으로 시작하기
             </Button>
 
-            {/* Sign Up Link */}
+            {/* 회원가입 */}
             <div className="text-center pt-2">
               <button
-                onClick={() => onNavigate("signup")}
+                onClick={() => router.push("/signup")}
                 className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
               >
                 계정이 없으신가요? 회원가입
@@ -208,7 +197,6 @@ const handleEmailLogin = async () => {
           </CardContent>
         </Card>
 
-        {/* Footer */}
         <div className="text-center text-sm text-gray-500">
           <p>오늘 하루도 고생한 너를 위한 너만의 작은 쉼터</p>
         </div>

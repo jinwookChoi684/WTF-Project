@@ -11,10 +11,10 @@ class UserCreate(BaseModel):
     birthDate: Optional[str] = None  # ✅ 문자열 하나 (선택사항)
     gender: str # "male" 또는 "female"
     mode: str # 반말, 존댓말모드
-    tf: str
     worry: Optional[str] = None
     socialId: Optional[str] = None
     age: int
+    tf: str
 
 
 # 로그인 요청 스키마
@@ -29,7 +29,8 @@ class UserLoginResponse(BaseModel):
     userId: str
     gender: str
     mode: str
-    tf: str
     worry: Optional[str] = None
     birthDate: Optional[str] = None
     loginMethod: str
+    age: Optional[int] = None
+    tf: str
