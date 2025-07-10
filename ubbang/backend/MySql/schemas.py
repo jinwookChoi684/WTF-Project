@@ -14,6 +14,7 @@ class UserCreate(BaseModel):
     worry: Optional[str] = None
     socialId: Optional[str] = None
     age: int
+    tf: str
 
 
 # 로그인 요청 스키마
@@ -31,3 +32,5 @@ class UserLoginResponse(BaseModel):
     worry: Optional[str] = None
     birthDate: Optional[str] = None
     loginMethod: str
+    age: Optional[int] = None
+    tf: str

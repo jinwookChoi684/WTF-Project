@@ -15,3 +15,4 @@ class User(Base):
     worry = Column(Text)
     mode = Column(String(20))
     age = Column(Integer)
+    tf = Column(String(1), default="f")

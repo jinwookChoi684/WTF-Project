@@ -36,25 +36,12 @@ def generate_image(emotion: str) -> str:
 # 프론트에서 이 데이터를 emotion-diary.tsx에 바로 반영하면되는거
 
 #---------------- 날짜 유틸 ----------------------------------------------------------------
-# utils.py
-def extract_city_from_message(msg: str) -> str:
-    # 기본적으로 많이 쓸 도시들 (필요시 확장)
-    cities = ["서울", "인천", "부산", "대구", "광주", "대전", "울산", "제주", "수원", "청주", "전주", "창원"]
-    for city in cities:
-        if city in msg:
-            return city
-    return "서울"  # 기본값
-
-
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
-def get_today_date():
-    now = datetime.now()
-
-    # 날짜
+def get_today_datetime_info():
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
     date_str = now.strftime("%Y년 %m월 %d일")
-
-    # 요일 (요일은 직접 매핑)
     weekday_map = {
         "Monday": "월요일",
         "Tuesday": "화요일",
@@ -66,13 +53,21 @@ def get_today_date():
     }
     weekday_eng = now.strftime("%A")
     weekday_str = weekday_map.get(weekday_eng, weekday_eng)
-
-    # 시간
     hour = now.strftime("%I")
     minute = now.strftime("%M")
     meridiem = now.strftime("%p").replace("AM", "오전").replace("PM", "오후")
     time_str = f"{meridiem} {int(hour)}시 {int(minute)}분"
 
-    return f"오늘은 {date_str} {weekday_str}이며, 현재 시각은 {time_str}입니다."
+    return {
+        "date": date_str,
+        "weekday": weekday_str,
+        "time": time_str
+    }
 
 
+def extract_city_from_message(msg: str) -> str:
+    cities = ["서울", "인천", "부산", "대구", "광주", "대전", "울산", "제주", "수원", "청주", "전주", "창원"]
+    for city in cities:
+        if city in msg:
+            return city
+    return "서울"

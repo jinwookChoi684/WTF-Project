@@ -16,8 +16,10 @@ import logging  # 로깅 모듈 임포트
 from app import chat
 from app import diary
 from MySql.user_router import router as user_router
+import asyncio
+# from app.idle_checker import start_idle_checker
+
 # from redis_utiles.redis_client import save_chat_message, get_recent_messages, cache_user_info
-#from redis_client import r     # redis_client.py에서 r 객체 import
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ app.include_router(chat.router)
 app.include_router(diary.router)
 app.include_router(user_router)
 origins = [
-    "http://localhost:3000"
+    "*"
 ]
 
 app.add_middleware(
@@ -89,7 +91,8 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
         mode=user.mode,
         worry=user.worry,
         socialId=user.socialId,
-        age=user.age
+        age=user.age,
+        tf=user.tf
     )
 
     try:
@@ -115,7 +118,9 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
                 "gender": new_user.gender,
                 "mode": new_user.mode,
                 "worry": new_user.worry,
-                "birthDate": new_user.birthDate
+                "birthDate": new_user.birthDate,
+                "age": new_user.age,
+                "tf": new_user.tf
                 }
     except SQLAlchemyError as e:
         db.rollback()
@@ -160,7 +165,9 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
         "worry": db_user.worry,
         "birthDate": str(db_user.birthDate),
         "loginMethod": "이메일 계정",
-        "isAnonymous": False
+        "isAnonymous": False,
+        "age": db_user.age,
+        "tf": db_user.tf
 
     }
 
@@ -243,6 +250,12 @@ async def chat_with_ai(chat: ChatInput):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="AI 응답 생성 중 예기치 않은 서버 오류가 발생했습니다."
         )
+
+
+# @app.on_event("startup")
+# async def startup_event():
+#     asyncio.create_task(start_idle_checker())
+
 
 # ✅ 감정 히스토리 및 컨텍스트 조회용 API
 # @app.get("/chat/context/{pk}")
