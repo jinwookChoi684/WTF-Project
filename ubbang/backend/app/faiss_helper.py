@@ -10,12 +10,16 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # 환경변수 로드 및 임베딩 모델 초기화
 load_dotenv()
-embedding_model = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
+
+embedding_model = OpenAIEmbeddings(
+    model="text-embedding-3-small",
+    openai_api_key=os.getenv("OPENAI_API_KEY")
+)
 
 # 텍스트 분할 설정
 text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=300,
-    chunk_overlap=30
+    chunk_size=400,
+    chunk_overlap=35
 )
 
 # ✅ 중복 체크 함수 (유사도 기반)
