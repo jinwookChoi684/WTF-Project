@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="06d5f4e8-e500-4c9b-aae6-c8dcbeb2716d" name="Changes" comment="remove .env history">
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/WTF-Project.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/MySql/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/MySql/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/MySql/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/MySql/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/MySql/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/MySql/user_router.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/MySql/user_router.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/BasePrompt_builder.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/BasePrompt_builder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/chat.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/chat.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/contextual_info.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/contextual_info.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/diary.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/diary.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/dynamo_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/dynamo_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/faiss_helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/faiss_helper.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/idle_checker.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/idle_checker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/naver_helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/naver_helper.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/openai_helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/openai_helper.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/app/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/app/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/redis_utiles/redis_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/redis_utiles/redis_client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/test_simulation.py" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/backend/test_simulation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/vectorstore/faiss_index/1/index.faiss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/vectorstore/faiss_index/1/index.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/vectorstore/faiss_index/10/index.faiss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/vectorstore/faiss_index/10/index.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/vectorstore/faiss_index/None/index.faiss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/vectorstore/faiss_index/None/index.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/vectorstore/faiss_index/test-pk/index.faiss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/backend/vectorstore/faiss_index/test-pk/index.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/app/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/app/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/components/anonymous-onboarding.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/components/anonymous-onboarding.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/components/chat-interface.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/components/chat-interface.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/components/diary-creation.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/components/diary-creation.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/components/emotion-diary.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/components/emotion-diary.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/components/login-screen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/components/login-screen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/components/profile-settings.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/components/profile-settings.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/components/signup.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/components/signup.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/hooks/useUser.ts" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/hooks/useUser.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/next.config.mjs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/postcss.config.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/postcss.config.mjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ubbang/frontend_1/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/ubbang/frontend_1/tsconfig.json" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;HyebinBae&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/jinwookChoi684/WTF-Project.git&quot;,
+    &quot;accountId&quot;: &quot;e40aabdc-8e2d-4186-a8d3-41006b855c07&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="2zLL6MrTB773whTiQpMuhbCLtQJ" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "hyebin__test",
+    "last_opened_file_path": "C:/Users/hi/PycharmProjects/WTF-Project/ubbang",
+    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\hi\PycharmProjects\WTF-Project\ubbang" />
+      <recent name="C:\Users\hi\PycharmProjects\WTF-Project\ubbang\backend\save_box" />
+      <recent name="C:\Users\hi\PycharmProjects\WTF-Project\ubbang\backend_2" />
+      <recent name="C:\Users\hi\PycharmProjects\WTF-Project\ubbang\backend" />
+      <recent name="C:\Users\hi\PycharmProjects\WTF-Project\ubbang\frontend_1" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-d7ad00fb9fc3-c546a90a8094-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.23726.102" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="06d5f4e8-e500-4c9b-aae6-c8dcbeb2716d" name="Changes" comment="" />
+      <created>1751505231073</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1751505231073</updated>
+    </task>
+    <task id="LOCAL-00001" summary="get_reg_response 수정">
+      <option name="closed" value="true" />
+      <created>1751505393819</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1751505393819</updated>
+    </task>
+    <task id="LOCAL-00002" summary="env 수정">
+      <option name="closed" value="true" />
+      <created>1751505535411</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1751505535411</updated>
+    </task>
+    <task id="LOCAL-00003" summary="backend 수정">
+      <option name="closed" value="true" />
+      <created>1751531627317</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1751531627317</updated>
+    </task>
+    <task id="LOCAL-00004" summary="backend 수정">
+      <option name="closed" value="true" />
+      <created>1751534597005</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1751534597005</updated>
+    </task>
+    <task id="LOCAL-00005" summary="backend 수정">
+      <option name="closed" value="true" />
+      <created>1751534601903</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1751534601903</updated>
+    </task>
+    <task id="LOCAL-00006" summary="chat 전반적인 기능 수정">
+      <option name="closed" value="true" />
+      <created>1751619840173</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1751619840173</updated>
+    </task>
+    <task id="LOCAL-00007" summary="chat 전반적인 기능 수정">
+      <option name="closed" value="true" />
+      <created>1751619954120</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1751619954120</updated>
+    </task>
+    <task id="LOCAL-00008" summary="test_simulation 코드수정">
+      <option name="closed" value="true" />
+      <created>1751622277351</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1751622277351</updated>
+    </task>
+    <task id="LOCAL-00009" summary="test_simulation 코드수정">
+      <option name="closed" value="true" />
+      <created>1751848560558</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1751848560558</updated>
+    </task>
+    <task id="LOCAL-00010" summary="쿼리받는 코드수정">
+      <option name="closed" value="true" />
+      <created>1751880113683</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1751880113683</updated>
+    </task>
+    <task id="LOCAL-00011" summary="쿼리받는 코드수정">
+      <option name="closed" value="true" />
+      <created>1751935995298</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1751935995298</updated>
+    </task>
+    <task id="LOCAL-00012" summary="remove .env history">
+      <option name="closed" value="true" />
+      <created>1751937034244</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1751937034244</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="OPEN_GENERIC_TABS">
+      <map>
+        <entry key="88369c22-3c0d-4a50-bac9-e01e36d0a8c0" value="TOOL_WINDOW" />
+      </map>
+    </option>
+    <option name="TAB_STATES">
+      <map>
+        <entry key="88369c22-3c0d-4a50-bac9-e01e36d0a8c0">
+          <value>
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="true" />
+                </map>
+              </option>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="hyebin_test" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="hyebin_test" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="get_reg_response 수정" />
+    <MESSAGE value="env 수정" />
+    <MESSAGE value="backend 수정" />
+    <MESSAGE value="chat 전반적인 기능 수정" />
+    <MESSAGE value="test_simulation 코드수정" />
+    <MESSAGE value="쿼리받는 코드수정" />
+    <MESSAGE value="remove .env history" />
+    <option name="LAST_COMMIT_MESSAGE" value="remove .env history" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ubbang/backend/main.py</url>
+          <line>245</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ubbang/backend/main.py</url>
+          <line>156</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>
