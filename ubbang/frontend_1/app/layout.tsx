@@ -1,20 +1,22 @@
-import type { Metadata } from 'next'
 import './globals.css'
+import ClientLayoutWrapper from '@/components/ClientLayoutWrapper'
+import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: "WhaT's your Feeling",
   description: 'Created with Ubbang',
-  generator: 'team Ubbang',
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
+      </body>
     </html>
   )
 }

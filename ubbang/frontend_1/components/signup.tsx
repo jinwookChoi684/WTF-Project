@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, User, Mail, Lock, Calendar, MessageCircle, Heart } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar as CalendarIcon, CalendarDays } from "lucide-react"
 import { Calendar as DatePicker } from "@/components/ui/calendar"
 import { format } from "date-fns";
+import { ko } from "date-fns/locale"
 
 interface SignupProps {
   onComplete: (userData: {
@@ -35,7 +36,6 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     confirmPassword: "",
     email: "",
     socialId: "",
-    age: "",
     gender: "",
     worry: "",
     birthDate: "",
@@ -43,13 +43,37 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
     tf:"",
   })
 
+  const [selectedDate, setSelectedDate] = useState<Date>()
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [step, setStep] = useState<"form" | "submitting" | "complete">("form")
+
+  const calculateAge = (birthDate: string) => {
+    if (!birthDate) return 0
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--
+    }
+    return age
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))
+    }
+  }
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date)
+      const year = date.getFullYear()
+      const month = (date.getMonth() + 1).toString().padStart(2, "0")
+      const day = date.getDate().toString().padStart(2, "0")
+      const dateString = `${year}-${month}-${day}`
+      handleInputChange("birthDate", dateString)
     }
   }
 
@@ -71,7 +95,6 @@ export default function Signup({ onComplete, onBack }: SignupProps) {
       newErrors.email = "올바른 이메일 형식이 아닙니다"
     }
 
-    if (!formData.age) newErrors.age = "나이를 선택해주세요"
     if (!formData.mode) newErrors.mode = "말투를 선택해주세요"
     if (!formData.gender) newErrors.gender = "성별을 선택해주세요"
     if (!formData.tf) newErrors.tf = "이성적(T) 공감적(F) 대화스타일을 선택해주세요"
@@ -94,11 +117,13 @@ const handleSubmit = async () => {
   setStep("submitting")
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/signup`, {
+    const calculatedAge = calculateAge(formData.birthDate)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({
       name: formData.name,
       userId: formData.userId,
@@ -109,7 +134,7 @@ const handleSubmit = async () => {
       socialId: formData.socialId || null,
       mode: formData.mode,
       worry: formData.currentConcern || null,
-      age: Number(formData.age),
+      age: Number(calculatedAge),
       tf:formData.tf
       }),
     })
@@ -125,6 +150,9 @@ const handleSubmit = async () => {
       const data = await response.json()
       console.log("✅ 가입 완료:", data)
 
+    // ✅ access_token 저장
+    localStorage.setItem('access_token', data.access_token);
+
       // ✅ 로그인과 동일한 형식으로 localStorage 저장
     const localStorageUserData = {
       pk: data.pk,
@@ -136,7 +164,7 @@ const handleSubmit = async () => {
       birthDate: data.birthDate,
       loginMethod: data.loginMethod,
       tf: data.tf,  // 기본값 설정
-      age: Number(formData.age),
+      age: Number(calculatedAge),
     }
     localStorage.setItem("user", JSON.stringify(localStorageUserData))
 
@@ -167,27 +195,9 @@ const handleSubmit = async () => {
   }
 }
 
-  const generateAgeOptions = () => {
-    const options = []
-    for (let i = 13; i <= 80; i++) {
-    options.push(
-      <SelectItem key={i} value={i.toString()}>
-          {i}세
-        </SelectItem>
-      )
-    }
-    return options
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
       <div className="w-full max-w-md space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-600 hover:text-gray-800">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            돌아가기
-          </Button>
-        </div>
 
         {step === "form" && (
           <>
@@ -323,61 +333,77 @@ const handleSubmit = async () => {
                 </div>
 
                 {/* 생년월일 */}
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <CalendarIcon className="w-4 h-4 mr-2 text-amber-600" />
+                    <CalendarDays className="w-4 h-4 mr-2 text-amber-600" />
                     생년월일
+                    {formData.birthDate && (
+                      <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                        {calculateAge(formData.birthDate)}세
+                      </span>
+                    )}
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className={`w-full justify-start text-left h-12 border-gray-200 rounded-xl ${
+                        className={`w-full justify-start text-left h-12 border-gray-200 hover:border-amber-300 focus:border-amber-300 focus:ring-amber-200 rounded-xl bg-white/50 backdrop-blur-sm ${
                           errors.birthDate ? "border-red-300" : ""
                         }`}
                       >
-                        {formData.birthDate ? formData.birthDate : "생년월일을 선택해주세요"}
+                        <CalendarDays className="mr-2 h-4 w-4 text-amber-600" />
+                        {selectedDate ? (
+                          <span className="text-gray-800">
+                            {format(selectedDate, "yyyy년 MM월 dd일", { locale: ko })}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">생년월일을 선택해주세요</span>
+                        )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent>
+                    <PopoverContent
+                      className="w-auto p-0 bg-white/95 backdrop-blur-sm border-amber-200 shadow-xl"
+                      align="start"
+                    >
+                      <div className="p-4 border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50">
+                        <h4 className="text-sm font-medium text-amber-800">생년월일 선택</h4>
+                        <p className="text-xs text-amber-600">나이는 자동으로 계산됩니다</p>
+                      </div>
                       <DatePicker
                         mode="single"
-                        captionLayout="dropdown"
+                        selected={selectedDate}
+                        onSelect={handleDateSelect}
+                        captionLayout="dropdown-buttons"
                         fromYear={1940}
-                        toYear={2020}
-                        onSelect={(date: Date | undefined) => {
-                          if (date) {
-                            const year = date.getFullYear();
-                            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                            const day = date.getDate().toString().padStart(2, '0');
-                            handleInputChange("birthDate", `${year}-${month}-${day}`);
-                          }
-                        }}
-                        components={{
-                          CaptionLabel: ({ displayMonth }) => (
-                            <span className="text-sm font-medium">
-                              {format(displayMonth, "LLLL yyyy")}
-                            </span>
-                            ),
+                        toYear={2010}
+                        className="rounded-md"
+                        classNames={{
+                          months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                          month: "space-y-4",
+                          caption: "flex justify-center pt-1 relative items-center",
+                          caption_label: "text-sm font-medium text-amber-800",
+                          nav: "space-x-1 flex items-center",
+                          nav_button:
+                            "h-7 w-7 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-md transition-colors",
+                          nav_button_previous: "absolute left-1",
+                          nav_button_next: "absolute right-1",
+                          table: "w-full border-collapse space-y-1",
+                          head_row: "flex",
+                          head_cell: "text-amber-600 rounded-md w-9 font-normal text-[0.8rem]",
+                          row: "flex w-full mt-2",
+                          cell: "h-9 w-9 text-center text-sm p-0 relative hover:bg-amber-50 rounded-md transition-colors",
+                          day: "h-9 w-9 p-0 font-normal hover:bg-amber-100 hover:text-amber-800 rounded-md transition-colors",
+                          day_selected:
+                            "bg-amber-400 text-white hover:bg-amber-500 hover:text-white focus:bg-amber-500 focus:text-white",
+                          day_today: "bg-orange-100 text-orange-800 font-semibold",
+                          day_outside: "text-gray-400 opacity-50",
+                          day_disabled: "text-gray-400 opacity-50",
+                          day_hidden: "invisible",
                         }}
                       />
                     </PopoverContent>
                   </Popover>
                   {errors.birthDate && <p className="text-xs text-red-600">{errors.birthDate}</p>}
-                </div>
-
-                {/* Age Selection */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <Calendar className="w-4 h-4 mr-2 text-amber-600" />
-                    나이
-                  </label>
-                  <Select value={formData.age} onValueChange={(value) => handleInputChange("age", value)}>
-                    <SelectTrigger className="h-12 border-gray-200 focus:border-amber-300 focus:ring-amber-200 rounded-xl">
-                      <SelectValue placeholder="나이를 선택해주세요" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60">{generateAgeOptions()}</SelectContent>
-                  </Select>
                 </div>
 
                 {/* 성별 */}

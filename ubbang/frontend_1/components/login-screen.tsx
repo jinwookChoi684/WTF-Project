@@ -51,10 +51,11 @@ export default function LoginScreen() {
 
     try {
      localStorage.removeItem("user")
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, password }),
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -64,8 +65,8 @@ export default function LoginScreen() {
       }
 
       const data = await response.json()
-        console.log("🔥 data.age 값:", data.age)
-       const userData = {
+      console.log("🔥 data.age 값:", data.age)
+      const userData = {
         pk: data.pk,
         name: data.name,
         userId: data.userId,
@@ -78,7 +79,7 @@ export default function LoginScreen() {
         tf:data.tf
       }
       localStorage.setItem("user", JSON.stringify(userData))
-      router.push(`/${userData.pk}/chat`)
+      router.push(`/${userData.pk}/prologue`)
     } catch (err) {
       console.error("❌ 로그인 실패:", err)
       alert("서버 오류가 발생했습니다.")

@@ -14,7 +14,7 @@ export default function AnonymousPage() {
       }}
       onBack={() => {
         // 🔙 로그인으로 돌아가기
-        router.push("/login")
+        router.push("/")
       }}
     />
   )

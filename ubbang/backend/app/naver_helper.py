@@ -5,8 +5,8 @@ from openai import OpenAI
 
 # 환경 변수 로드
 load_dotenv()
-NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
-NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
+NAVER_CLIENT_ID = os.getenv("NAVER_SEARCH_CLIENT_ID")
+NAVER_CLIENT_SECRET = os.getenv("NAVER_SEARCH_CLIENT_SECRET")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # OpenAI 클라이언트
@@ -46,7 +46,7 @@ def format_results(items: list, label: str) -> str:
         result += f"{title} — {desc}\n"
     return result.strip()
 
-def get_external_info(query: str, system_prompt: str, memory) -> str:
+async def get_external_info(query: str, mode: str) -> str:
     """
     외부 정보 검색 통합 함수: 블로그 + 뉴스 + 지식iN
     결과 요약은 OpenAI로 처리
@@ -82,10 +82,15 @@ def get_external_info(query: str, system_prompt: str, memory) -> str:
 """.strip()
 
     try:
+        # mode에 따른 기본 프롬프트 생성
+        if mode == "banmal":
+            base_prompt = "당신은 친근하고 도움이 되는 AI 어시스턴트입니다. 반말로 대답하세요."
+        else:
+            base_prompt = "당신은 정중하고 도움이 되는 AI 어시스턴트입니다. 존댓말로 대답하세요."
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": base_prompt},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,

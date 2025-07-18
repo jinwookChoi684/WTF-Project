@@ -15,6 +15,8 @@ class UserCreate(BaseModel):
     socialId: Optional[str] = None
     age: int
     tf: str
+    pushEnabled: Optional[bool] = True   # 🔔 알림 설정 추가
+    pushTime: Optional[str] = "20:00"    # ⏰ 알림 시간 추가
 
 
 # 로그인 요청 스키마
@@ -22,7 +24,7 @@ class UserLogin(BaseModel):
     userId: str
     password: str
 
-# 로그인 응답 스키마
+# 로그인 응답 스키마 (JWT 포함)
 class UserLoginResponse(BaseModel):
     pk: int
     name: str
@@ -34,3 +36,5 @@ class UserLoginResponse(BaseModel):
     loginMethod: str
     age: Optional[int] = None
     tf: str
+    access_token: str       # ✅ 추가
+    refresh_token: str      # ✅ 추가

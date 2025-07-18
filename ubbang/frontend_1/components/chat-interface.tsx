@@ -32,7 +32,8 @@ interface ChatInterfaceProps {
   }
 }
 
-export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {const router = useRouter()
+export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
+  const router = useRouter()
   const { user } = useUser()
   const ws = useRef<WebSocket | null>(null)
 
@@ -46,6 +47,7 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const hasConnectedOnce = useRef(false)
+  const [currentAiMessage, setCurrentAiMessage] = useState<Message | null>(null)
 
   const activeUser = user ?? initialUserInfo ?? {}
   const pk = activeUser.pk ?? 0
@@ -73,7 +75,10 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
 
     const timeout = setTimeout(() => {
       hasConnectedOnce.current = true
-      const wsUrl = `ws://localhost:8000/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=${tf}`
+      const httpBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://ubbangfeeling.com/api/"
+      const wsBaseUrl = httpBaseUrl.replace(/^http/, "ws")
+
+      const wsUrl = `${wsBaseUrl}/ws?pk=${pk}&userId=${userId}&mode=${mode}&gender=${gender}&age=${age}&tf=${tf}`
       console.log("📡 WebSocket 연결 URL:", wsUrl)
 
       if (ws.current) {
@@ -89,14 +94,25 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
       }
 
       socket.onmessage = (event) => {
-        const aiMessage: Message = {
-          id: Date.now().toString(),
-          content: event.data,
-          sender: "ai",
-          timestamp: new Date(),
+        if (event.data === "...") {
+          setIsTyping(true)
+          return
         }
-        setMessages((prev) => [...prev, aiMessage])
+
         setIsTyping(false)
+
+        setCurrentAiMessage((prev) => {
+          if (prev) {
+            return { ...prev, content: prev.content + event.data }
+          } else {
+            return {
+              id: Date.now().toString(),
+              content: event.data,
+              sender: "ai",
+              timestamp: new Date(),
+            }
+          }
+        })
       }
 
       socket.onerror = () => {
@@ -126,7 +142,7 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  }, [messages, currentAiMessage, isTyping])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputMessage(e.target.value)
@@ -140,6 +156,15 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
 
   const handleSendMessage = () => {
     if (!inputMessage.trim() || isUserTyping) return
+
+    if (currentAiMessage) {
+      setMessages((prev) => {
+        // ✅ ID 중복 방지
+        if (prev.some((m) => m.id === currentAiMessage.id)) return prev
+        return [...prev, currentAiMessage]
+      })
+      setCurrentAiMessage(null)
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -162,17 +187,6 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
       handleSendMessage()
     }
   }
-
-  useEffect(() => {
-      setMessages([
-        {
-          id: "1",
-          content: `안녕하세요 ${userName}님! 저는 우빵이입니다. 오늘 하루는 어떠셨나요? 편안하게 이야기해 주세요.`,
-          sender: "ai",
-          timestamp: new Date(),
-        },
-      ])
-    }, [userName])
 
     useEffect(() => {
       const loadChatHistory = async () => {
@@ -219,6 +233,12 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
           <div className="flex justify-center gap-2 px-4 pb-3">
             <Button
               size="sm"
+              onClick={() => router.push(`/${pk}/prologue`)}
+              className="bg-pink-100 hover:bg-amber-200 text-amber-800 border-amber-200"
+              > 메인 페이지로
+            </Button>
+            <Button
+              size="sm"
               className="bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200"
             > 오늘도 고생했어
             </Button>
@@ -249,7 +269,7 @@ export default function ChatInterface({ initialUserInfo }: ChatInterfaceProps) {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <SessionSummary />
-        {messages.map((message) => (
+        {[...messages, ...(currentAiMessage ? [currentAiMessage] : [])].map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
         {isTyping && (

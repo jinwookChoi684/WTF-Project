@@ -138,16 +138,9 @@ export default function EmotionDiary({ user }: EmotionDiaryProps) {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">일기 바꿔볼래?</h3>
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">일기 같이 볼래?</h3>
                 <p className="text-amber-700 text-sm">내가 바라본 너야, 나랑 같이 보자!</p>
               </div>
-                <Button
-                  onClick={() => setShowCreation(true)}
-                  className="bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  일기 수정
-                </Button>
             </div>
           </CardContent>
         </Card>

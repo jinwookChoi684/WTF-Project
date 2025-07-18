@@ -24,7 +24,7 @@ interface DiaryCreationProps {
 }
 
 export default function DiaryCreation({ onComplete, onCancel }: DiaryCreationProps) {
-    const router = useRouter()
+  const router = useRouter()
   const [step, setStep] = useState<"analyzing" | "generating" | "complete">("analyzing")
   const [generatedEntry, setGeneratedEntry] = useState<DiaryEntryType | null>(null)
 

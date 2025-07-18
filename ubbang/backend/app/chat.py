@@ -1,56 +1,54 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 import os, uuid, time, asyncio
 from dotenv import load_dotenv
 import boto3
 from boto3.dynamodb.conditions import Key
-from fastapi import APIRouter, HTTPException
-from .BasePrompt_builder import BasePromptBuilder
+from datetime import datetime
 
+# 사용자 정의 모듈
+from .BasePrompt_builder import BasePromptBuilder
 from .openai_helper import (
-    get_chatbot_response,
     get_user_memory,
     detect_query_type,
-    get_rag_response,
-    should_use_vector_search)
-
+    should_use_vector_search,
+    summarize_chunks,
+    stream_gpt_response
+)
 from .weather import get_weather_data
 from .utils import extract_city_from_message, get_today_datetime_info
-from .contextual_info import get_contextual_info_reply, should_trigger_contextual_info
+from .contextual_info import get_contextual_info_reply
 from .naver_helper import get_external_info
-
 from .faiss_helper import save_to_faiss, search_from_faiss
-from datetime import datetime
+from .prompt_assembler import assemble_system_prompt
+from .emotion_inference import extract_emotion
+from .topic_classifier import classify_topic
 
 # -------------------------------------------------------------------------------
 
 load_dotenv()
 router = APIRouter()
 dynamodb = boto3.resource("dynamodb", region_name="ap-northeast-2")
-table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages"))
-
+table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME", "ChatMessages_2"))
 
 # -------------------------------------------------------------------------------
 
-# 유저 활동 시간 업데이트 함수 (4시간 무응답 감지용)
 def update_last_active_time(pk: str):
     try:
         table.update_item(
-            Key={"pk": pk, "timestamp": 0},  # 유휴 추적용 dummy row
+            Key={"pk": pk, "timestamp": 0},
             UpdateExpression="SET last_active_time = :t",
             ExpressionAttributeValues={":t": int(time.time())}
         )
     except Exception as e:
         print(f"[ERROR] last_active_time 업데이트 실패: {e}")
 
-
-# 메시지 저장
 def save_message_to_dynamo(pk: str, userId: str, role: str, content: str, gender: str, tf: str):
     try:
         table.put_item(
             Item={
-                "pk": str(pk),  # 파티션 키
-                "timestamp": int(time.time()),  # 정렬 키
-                "userId": str(userId),  # 참고용
+                "pk": str(pk),
+                "timestamp": int(time.time()),
+                "userId": str(userId),
                 "gender": gender,
                 "tf": str(tf),
                 "role": role,
@@ -61,29 +59,22 @@ def save_message_to_dynamo(pk: str, userId: str, role: str, content: str, gender
     except Exception as e:
         print(f"[ERROR] 메시지 저장 실패: {e}")
 
+# -------------------------------------------------------------------------------
 
-# WebSocket 엔드포인트
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
-    # ✅ 쿼리에서 유저 정보 수신
     pk = str(websocket.query_params.get("pk"))
     userId = websocket.query_params.get("userId", f"guest-{str(uuid.uuid4())}")
     gender = websocket.query_params.get("gender", "female")
     mode = websocket.query_params.get("mode", "banmal")
     age = int(websocket.query_params.get("age", "25"))
-    tf = websocket.query_params.get("tf", "F")  # T or F
+    tf = websocket.query_params.get("tf", "F")
 
     print(f"📥 WebSocket 요청 들어옴: pk={pk}, user_id={userId}, mode={mode}, gender={gender}, age={age}, tf={tf}")
 
-    # ✅ system prompt 생성
-    prompt_builder = BasePromptBuilder(gender=gender, mode=mode, age=age, tf=tf)
-    system_prompt = prompt_builder.build()
-
-    # ✅ 메모리 복원 (LangChain)
     memory = get_user_memory(pk)
-
     embedding_counter = 0
     buffered_messages = []
 
@@ -92,46 +83,70 @@ async def websocket_endpoint(websocket: WebSocket):
             user_msg = await websocket.receive_text()
             print(f"👤 유저 메시지: {user_msg}")
 
-            # ✅ 1. 메시지 저장 (user) + 활동 시간 갱신
+            # 감정/주제 추론
+            emotion = await extract_emotion(user_msg)
+            topic = await classify_topic(user_msg)
+
+            print(f"🎯 감정 추론 결과: {emotion if emotion else '❌ 감정 없음'}")
+            print(f"🎯 주제 분류 결과: {topic if topic else '❌ 주제 없음'}")
+
+            # system prompt 조립
+            system_prompt = assemble_system_prompt(
+                gender=gender,
+                mode=mode,
+                age=age,
+                tf=tf,
+                emotion=emotion,
+                topic=topic
+            )
+
             save_message_to_dynamo(pk, userId, "user", user_msg, gender, tf)
             update_last_active_time(pk)
 
-            # ✅ 2. 날씨/시간 판단 → 자동응답
-            contextual_reply = await get_contextual_info_reply(user_input=user_msg, system_prompt=system_prompt,
-                                                               memory=memory)
+            contextual_reply = await get_contextual_info_reply(user_input=user_msg, system_prompt=system_prompt, memory=memory)
             if contextual_reply:
                 save_message_to_dynamo(pk, userId, "assistant", contextual_reply, gender, tf)
                 memory.chat_memory.add_user_message(user_msg)
                 memory.chat_memory.add_ai_message(contextual_reply)
                 await websocket.send_text(contextual_reply)
-                continue  # GPT 호출 생략
+                continue
 
-            # ✅ 3. 질의 유형 분기 (개인기록/RAG/일반대화)
             query_type = detect_query_type(user_msg)
             print(f"🔍 쿼리 유형 감지: {query_type}")
 
             if query_type == "외부정보검색":
-                reply = get_external_info(user_msg, mode, memory)
+                await websocket.send_text("...")  # 입력중 표시
+                external_info = await get_external_info(user_msg, mode)
+                prompt = f"{system_prompt}\nuser: {user_msg}\n\n외부 검색 결과:\n{external_info}"
 
+                full_response = ""
+                async for token in stream_gpt_response(prompt, memory, user_msg):
+                    await websocket.send_text(token)
+                    full_response += token
+
+                reply = full_response
             else:
                 retrieved_chunks = search_from_faiss(pk, user_msg) if should_use_vector_search(user_msg) else []
+                context_summary = await summarize_chunks(retrieved_chunks[:10]) if retrieved_chunks else None
 
-                reply = await get_chatbot_response(
-                    pk=pk,
-                    user_input=user_msg,
-                    system_prompt=system_prompt,
-                    memory=memory,
-                    faiss_context="\n".join(retrieved_chunks) if retrieved_chunks else None
-                )
+                system_prompt_with_context = system_prompt
+                if context_summary:
+                    system_prompt_with_context += f"\n\n# 유저 과거 요약 내용:\n{context_summary}"
 
-            # ✅ 4. 응답 저장 및 전송 + 활동 시간 갱신
+                await websocket.send_text("...")  # 입력중 표시
+
+                full_response = ""
+                async for token in stream_gpt_response(system_prompt_with_context, memory, user_msg):
+                    await websocket.send_text(token)
+                    full_response += token
+
+                reply = full_response
+
             save_message_to_dynamo(pk, userId, "assistant", reply, gender, tf)
             update_last_active_time(pk)
             memory.chat_memory.add_user_message(user_msg)
             memory.chat_memory.add_ai_message(reply)
-            await websocket.send_text(reply)
 
-            # ✅ 5. FAISS 업데이트 (10턴 마다 저장)
             buffered_messages.append({"role": "user", "content": user_msg})
             buffered_messages.append({"role": "assistant", "content": reply})
             embedding_counter += 1
@@ -140,7 +155,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 save_to_faiss(pk, buffered_messages)
                 embedding_counter = 0
                 buffered_messages = []
-
 
     except WebSocketDisconnect:
         print("❌ WebSocket 연결 끊김")
@@ -152,14 +166,14 @@ async def websocket_endpoint(websocket: WebSocket):
             print("📦 WebSocket 종료 시점 FAISS 저장 실행")
             save_to_faiss(pk, buffered_messages)
 
-# 과거 대화내용 프론트에 띄우기
-chat_router = APIRouter()
+# -------------------------------------------------------------------------------
+
 @router.get("/chat/history")
 def get_chat_history(pk: str):
     try:
         response = table.query(
             KeyConditionExpression=Key("pk").eq(pk),
-            ScanIndexForward=True  # 오래된 순 정렬
+            ScanIndexForward=True
         )
         items = response.get("Items", [])
         return [

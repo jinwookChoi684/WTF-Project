@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status,Response
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from MySql.database import SessionLocal, engine, Base
@@ -10,16 +10,14 @@ from pydantic import BaseModel
 from MySql import models
 from dotenv import load_dotenv
 from openai import OpenAI
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
-import logging  # 로깅 모듈 임포트
-from app import chat
-from app import diary
+import logging
+from jose import jwt
+from app import chat, diary
 from MySql.user_router import router as user_router
-import asyncio
-# from app.idle_checker import start_idle_checker
-
-# from redis_utiles.redis_client import save_chat_message, get_recent_messages, cache_user_info
+from naver_oauth import router as naver_router
+from MySql.user_router import router as push_router
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -29,17 +27,18 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     logger.error("OPENAI_API_KEY 환경 변수가 설정되지 않았습니다.")
-
 client = OpenAI(api_key=OPENAI_API_KEY)
+JWT_SECRET = os.getenv("SECRET_KEY")
+JWT_ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
 app = FastAPI()
-app.include_router(chat.router)
-app.include_router(diary.router)
-app.include_router(user_router)
 origins = [
-    "*"
+    "https://ubbangfeeling.com",
+    "https://www.ubbangfeeling.com",
+    "https://ubbangfeeling.com",
+    "https://www.ubbangfeeling.com",
+    "https://localhost:3000"
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -47,6 +46,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+#api 경로를 그룹별로 명확하게 분리하기 위해 백엔드 prefix="/api" 추가
+app.include_router(chat.router,prefix="/api")
+app.include_router(diary.router,prefix="/api")
+app.include_router(user_router,prefix="/api")
+app.include_router(naver_router,prefix="/api")
+app.include_router(push_router,prefix="/api")
+
 
 try:
     Base.metadata.create_all(bind=engine)
@@ -63,72 +69,25 @@ async def get_db():
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# ✅ JWT 발급 함수
+def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=1)):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def create_refresh_token(data: dict, expires_delta: timedelta = timedelta(days=7)):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
 @app.get("/")
 async def root():  # 비동기 함수로 변경
     return {"message": "서버 잘 켜졌어! 🎉"}
 
-@app.post("/signup")
-async def signup(user: UserCreate, db: Session = Depends(get_db)):
-    logger.info(f"🚀 /signup 요청 도착! 사용자 ID: {user.userId}")
 
-    db_user = db.query(User).filter(User.userId == user.userId).first()
-    if db_user:
-        logger.warning(f"⚠️ 이미 존재하는 아이디: {user.userId}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미 사용 중인 아이디입니다."
-        )
-
-    hashed_password = pwd_context.hash(user.password)
-
-    new_user = User(
-        userId=user.userId,
-        name=user.name,
-        password=hashed_password,
-        email=user.email,
-        birthDate=user.birthDate,
-        gender=user.gender,
-        mode=user.mode,
-        worry=user.worry,
-        socialId=user.socialId,
-        age=user.age,
-        tf=user.tf
-    )
-
-    try:
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        logger.info(f"✅ 회원가입 성공: {new_user.userId}")
-
-        # Redis 캐싱
-        # cache_user_info(
-        #     new_user.userId,
-        #     {
-        #         "name": new_user.name,
-        #         "email": new_user.email,
-        #         "gender": new_user.gender,
-        #         "birthDate": str(new_user.birthDate),
-        #     }
-        # )
-        return {"message": "회원가입 성공",
-                "pk": new_user.pk,
-                "userId": new_user.userId,
-                "name": new_user.name,
-                "gender": new_user.gender,
-                "mode": new_user.mode,
-                "worry": new_user.worry,
-                "birthDate": new_user.birthDate,
-                "age": new_user.age,
-                "tf": new_user.tf
-                }
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"❌ 회원가입 중 DB 오류 발생: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="회원가입 중 데이터베이스 오류가 발생했습니다."
-        )
 
 # 비회원 가입시 로그인 강제 처리
 @app.post("/users")
@@ -136,40 +95,6 @@ async def create_user_alias(user: UserCreate, db: Session = Depends(get_db)):
     return await signup(user, db)
 
 
-@app.post("/login", response_model=UserLoginResponse)
-async def login(user: UserLogin, db: Session = Depends(get_db)):
-    logger.info(f"🚪 로그인 시도: {user.userId}")
-    db_user = db.query(User).filter(User.userId == user.userId).first()
-
-    if not db_user:
-        logger.warning(f"❌ 사용자 없음: {user.userId}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="존재하지 않는 사용자입니다."
-        )
-
-    if not pwd_context.verify(user.password, db_user.password):
-        logger.warning(f"❌ 비밀번호 불일치: {user.userId}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="비밀번호가 일치하지 않습니다."
-        )
-
-    logger.info(f"✅ 로그인 성공: {db_user.userId}")
-    return {
-        "pk": db_user.pk,
-        "userId": db_user.userId,
-        "name": db_user.name,
-        "gender": db_user.gender,
-        "mode": db_user.mode,
-        "worry": db_user.worry,
-        "birthDate": str(db_user.birthDate),
-        "loginMethod": "이메일 계정",
-        "isAnonymous": False,
-        "age": db_user.age,
-        "tf": db_user.tf
-
-    }
 
 class DeleteRequest(BaseModel):
     userId: str

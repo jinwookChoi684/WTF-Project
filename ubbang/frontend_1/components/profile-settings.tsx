@@ -1,6 +1,8 @@
 "use client"
 
+import PushSubscriber from "@/components/PushSubscriber"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,67 +26,87 @@ interface UserData {
   birthDate: string
   loginMethod: string
   tf: string
+  pushEnabled?: boolean
+  pushTime?: string
 }
 
-export default function ProfileSettings({ onLogout }: { onLogout: () => void }) {
+export default function ProfileSettings() {
+  const router = useRouter()
+
   const [user, setUser] = useState<UserData | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState<UserData | null>(null)
   const [notifications, setNotifications] = useState(true)
   const [notificationTime, setNotificationTime] = useState("20:00")
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser)
-      setUser(parsedUser)
-      setEditData(parsedUser)
-    }
-  }, [])
+useEffect(() => {
+  const storedUser = localStorage.getItem("user")
+  if (storedUser) {
+    const parsedUser = JSON.parse(storedUser)
+    setUser(parsedUser)
+    setEditData(parsedUser)
+    setNotifications(parsedUser.pushEnabled ?? true)
+    setNotificationTime(parsedUser.pushTime ?? "20:00")
+  }
+}, [])
 
-  const handleSave = async () => {
-    if (!editData) return
+/*로그아웃시에 localStorage에 있는 데이터 삭제 */
+  const onLogout = () => {
+    localStorage.clear()
+    sessionStorage.clear()
+    router.push("/")
 
-    const payload = {
-      pk: Number(editData.pk),
-      name: editData.name ?? "",
-      gender: editData.gender ?? "etc",
-      mode: editData.mode ?? "banmal",
-      worry: editData.worry ?? "",
-      tf: editData.tf ?? "f"
-    }
+    const loginMethod = user?.loginMethod
 
-    console.log("보내는 payload:", payload)
-
-    try {
-        /*
-        혜빈님께 받은 코드는 `update-user`였어요. 제가 라우터 정리하다가 수정된 라우터들이 꽤 있는데
-        user을 넣어야 수정 작동합니다 확인한번만 해주세요 !!
-        */
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/update-user`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      })
-
-      if (!response.ok) {
-        const err = await response.json()
-        alert(err.detail || "수정 실패")
-        return
-      }
-
-      const updatedUser = await response.json()
-      setUser(updatedUser)
-      setEditData(updatedUser)
-      localStorage.setItem("user", JSON.stringify(updatedUser))
-      setIsEditing(false)
-      alert("수정 완료!")
-    } catch (err) {
-      console.error("수정 실패:", err)
-      alert("서버 오류")
+    if (loginMethod === "naver") {
+      window.location.href = "https://nid.naver.com/nidlogin.logout"
+       router.push("/")
+    } else {
+      router.push("/")
     }
   }
 
+    const handleSave = async () => {
+      if (!editData) return
+
+      const payload = {
+        pk: Number(editData.pk),
+        name: editData.name || "",        // ❗ ""이라도 보내기
+        gender: editData.gender || "etc",
+        mode: editData.mode || "banmal",
+        worry: editData.worry || "",
+        tf: editData.tf || "f",
+        pushEnabled: notifications,
+        pushTime: notificationTime,
+      }
+      console.log("📦 PATCH 보내는 데이터:", payload)
+
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/update-user`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+
+        if (!response.ok) {
+          const err = await response.json()
+          alert(err.detail || "수정 실패")
+          return
+        }
+
+        const updatedUser = await response.json()
+         setUser(updatedUser)
+         setEditData(updatedUser)
+         setNotifications(updatedUser.pushEnabled ?? true)
+         setNotificationTime(updatedUser.pushTime ?? "20:00")
+        localStorage.setItem("user", JSON.stringify(updatedUser))
+        setIsEditing(false)
+        alert("수정 완료!")
+      } catch (err) {
+        console.error("수정 실패:", err)
+        alert("서버 오류")
+      }
+    }
   const handleDeleteAccount = async () => {
     const confirmDelete = window.confirm("정말 계정을 삭제하시겠어요?")
     if (!confirmDelete) return
@@ -111,11 +133,13 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
     }
   }
 
+
   if (!user || !editData)
     return <div className="text-center mt-10 text-gray-500">유저 정보를 불러오는 중...</div>
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 p-4">
+          {/* ✅ 여기에 임시 테스트용 PushSubscriber 삽입 */}
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -166,7 +190,6 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
                   <SelectContent>
                     <SelectItem value="male">남자</SelectItem>
                     <SelectItem value="female">여자</SelectItem>
-                    <SelectItem value="etc">기타</SelectItem>
                   </SelectContent>
                 </Select>
               ) : (
@@ -241,7 +264,7 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
               <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-800">{user.birthDate}</div>
             </div>
 
-            {/* 버튼 */}
+            {/* 프로필 수정 버튼 */}
             <div className="flex justify-end space-x-2 pt-2">
               {isEditing ? (
                 <>
@@ -293,16 +316,58 @@ export default function ProfileSettings({ onLogout }: { onLogout: () => void }) 
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="09:00">오전 9시</SelectItem>
+                    <SelectItem value="10:10">오전 10시</SelectItem>
+                    <SelectItem value="10:40">오전 10시 40분</SelectItem>
+                    <SelectItem value="11:00">오전 11시</SelectItem>
                     <SelectItem value="12:00">오후 12시</SelectItem>
                     <SelectItem value="18:00">오후 6시</SelectItem>
                     <SelectItem value="20:00">오후 8시</SelectItem>
-                    <SelectItem value="21:00">오후 10시</SelectItem>
+                    <SelectItem value="22:00">오후 10시</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             )}
+            {/* 💾 알림 설정 저장 버튼 */}
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button
+                onClick={async () => {
+                  if (!user) return
+                  const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/update-user`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      pk: user.pk,
+                      pushEnabled: notifications,
+                      pushTime: notificationTime,
+                    }),
+                  })
+                if (!response.ok) {
+                  const err = await response.json()
+                  alert(err.detail || "알림 설정 저장 실패")
+                  return
+                }
+
+                // ✅ 상태 갱신
+                const updatedUser = {
+                  ...user,
+                  pushEnabled: notifications,
+                  pushTime: notificationTime,
+                }
+                setUser(updatedUser)
+                localStorage.setItem("user", JSON.stringify(updatedUser))
+
+                alert("🔔 알림 설정이 저장되었어요!")
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              알림 설정 저장
+            </Button>
+            </div>
+
           </CardContent>
         </Card>
+        {/* ✅ 푸시 구독 컴포넌트 삽입 */}
+        <PushSubscriber enabled={notifications} time={notificationTime} />
 
         {/* 계정 삭제 */}
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
